@@ -1,0 +1,37 @@
+#fullBtn {
+    position           : absolute;
+    top                : 20px;
+    right              : 20px;
+    width              : 35px;
+    height             : 35px;
+    background-image   : url('../../assets/images/fullBtn/btn.png');
+    background-position: center;
+    background-size    : cover;
+    background-repeat  : no-repeat;
+    overflow           : hidden;
+    z-index            : 3;
+    cursor             : pointer;
+}
+
+#fullBtn:hover {
+    background-image: url('../../assets/images/fullBtn/btn_hover.png');
+}
+
+#isFull {
+    position           : absolute;
+    top                : 20px;
+    right              : 20px;
+    width              : 35px;
+    height             : 35px;
+    background-image   : url('../../assets/images/fullBtn/btn_hover.png');
+    background-position: center;
+    background-size    : cover;
+    background-repeat  : no-repeat;
+    overflow           : hidden;
+    z-index            : 3;
+    cursor             : pointer;
+}
+
+#full_mobile {
+    display: none;
+}

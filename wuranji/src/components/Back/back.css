@@ -1,0 +1,16 @@
+#back {
+    width              : 35px;
+    height             : 35px;
+    position           : absolute;
+    top                : 20px;
+    left               : 20px;
+    background-image   : url('../../assets/images/back/btn.png');
+    background-position: center;
+    background-repeat  : no-repeat;
+    background-size    : contain;
+    cursor             : pointer;
+}
+
+#back:hover {
+    background-image: url('../../assets/images/back/btn_hover.png');
+}
