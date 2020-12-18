@@ -12,7 +12,7 @@ export const types = {
 };
 
 const initialState: State = {
-    isLoading: false,
+    isLoading: true,
     isStart: false,
     total: 0,
     loaded: 0,
