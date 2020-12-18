@@ -15,7 +15,7 @@ import './three.css';
 
 function Three() {
     const dispatch = useDispatch();
-    const { isLoading } = useSelector((state: State) => state.system);
+    const { isLoading, isStart } = useSelector((state: State) => state.system);
 
     function init() {
         if (isPC) {
@@ -38,7 +38,8 @@ function Three() {
         });
 
         animate(initReturn, () => {
-            if (!isLoading) return;
+            if (isLoading) return;
+            if (!isStart) return;
             // 处理一些回调
             callback();
         });
