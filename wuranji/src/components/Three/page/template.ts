@@ -11,7 +11,7 @@ import isPC from '../../../utils/isPC';
  *                  this parameter is the number of models loaded for the current scene.
  * @param setLoaded setLoaded function, once after loading each model
  */
-function Template(initReturn: InitReturn, setTotal: (number: number) => void, setLoaded: (loaded?: number) => void) {
+function Template(initReturn: InitReturn, setTotal: (number: number) => void, setLoaded: (loaded?: number) => void, setCurrentPart: (partName: string) => void) {
     const { scene } = initReturn;
 
     const pageGroup = new THREE.Group();

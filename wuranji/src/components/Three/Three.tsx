@@ -4,7 +4,7 @@ import { useSelector, useDispatch } from 'react-redux';
 
 import isPC from '../../utils/isPC';
 import initFn from './modules/init';
-import animate from './modules/animate';
+import animate, { setAnimation } from './modules/animate';
 
 import Template from './page/template';
 
@@ -26,12 +26,13 @@ function Three() {
 
         const initReturn = initFn('three');
 
-        const template = Template(initReturn, setTotal, setLoaded);
+        const template = Template(initReturn, setTotal, setLoaded, setCurrentPart);
 
         const { name, promise, callback } = template;
 
         Promise.all(promise).then(() => {
             loaded();
+            setAnimation(true);
         }).catch(err => {
             console.error(err);
             message.error('加载失败!', 0);
@@ -43,6 +44,15 @@ function Three() {
             // 处理一些回调
             callback();
         });
+    }
+
+    /**
+     * 设置零部件名称, 拆装时使用
+     * @param part 零部件名称
+     */
+    function setCurrentPart(part: string) {
+        const action = actions.systemSetPart({ part });
+        dispatch(action);
     }
 
     function loaded() {

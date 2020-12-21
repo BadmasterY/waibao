@@ -30,4 +30,8 @@ function animate(initReturn: InitReturn, callback = () => { }): void {
     callback();
 }
 
+export function setAnimation(isUse = true) {
+    isAnimation = isUse;
+}
+
 export default animate;

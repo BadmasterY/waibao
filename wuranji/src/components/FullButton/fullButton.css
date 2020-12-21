@@ -11,6 +11,7 @@
     overflow           : hidden;
     z-index            : 3;
     cursor             : pointer;
+    transition         : all .3s;
 }
 
 #fullBtn:hover {

@@ -9,13 +9,17 @@ export const types = {
     TOTAL: 'systemTotal',
     LOADING: 'systemLoading',
     START: 'systemStart',
+    CURRENT: 'systemSetCurrent',
+    PART: 'systemSetPart',
 };
 
 const initialState: State = {
-    isLoading: true,
+    isLoading: false,
     isStart: false,
     total: 0,
     loaded: 0,
+    current: 0,
+    part: '',
 };
 
 export default function reducer(state = initialState, action: Action) {
@@ -41,6 +45,16 @@ export default function reducer(state = initialState, action: Action) {
             if (payload?.total)
                 totalState.total += payload.total;
             return totalState;
+        case types.CURRENT:
+            const currentState = Object.assign({}, state);
+            if (payload?.current !== undefined)
+                currentState.current = payload.current;
+            return currentState;
+        case types.PART:
+            const partState = Object.assign({}, state);
+            if (payload?.part !== undefined)
+                partState.part = payload.part;
+            return partState;
         default:
             return state;
     }
@@ -51,4 +65,6 @@ export const actions = {
     systemStart: (payload?: Payload) => ({ type: types.START, payload }),
     systemLoaded: (payload?: Payload) => ({ type: types.LOADED, payload }),
     systemTotal: (payload: Payload) => ({ type: types.TOTAL, payload }),
+    systemSetCurrent: (payload: Payload) => ({ type: types.CURRENT, payload }),
+    systemSetPart: (payload: Payload) => ({ type: types.PART, payload }),
 };
