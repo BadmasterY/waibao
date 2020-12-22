@@ -18,15 +18,6 @@ let isTouchStart = false;
 let startPos = 0;
 let oldPos = 0;
 
-function preventDefaultFn() {
-    document.body.addEventListener('touchstart', (ev) => {
-        ev.preventDefault();
-    }, false);
-    document.body.addEventListener('touchmove', (ev) => {
-        ev.preventDefault();
-    }, false);
-}
-
 function TabListMobile() {
     const { current, part } = useSelector((state: State) => state.system);
 
@@ -36,7 +27,6 @@ function TabListMobile() {
     const [light, setLight] = useState(50);
 
     window.addEventListener('load', VorH, false);
-    window.addEventListener('load', preventDefaultFn, false);
 
     useEffect(() => {
         setStructure('');
@@ -52,9 +42,12 @@ function TabListMobile() {
         isTouchStart = false;
         if (window.orientation == 90 || window.orientation == -90) {
             setOrientation(orient[0]);
+            document.body.style.touchAction = 'pan-x';
         } else if (window.orientation == 0 || window.orientation == 180) {
             setOrientation(orient[1]);
+            document.body.style.touchAction = 'pan-y';
         }
+
     }
 
     function renderList() {
