@@ -437,8 +437,10 @@
     }
 
     .brightness-progress {
-        width : 100%;
-        height: 12px;
+        width           : 100%;
+        height          : 12px;
+        margin-top      : 6px;
+        background-image: url('../../assets/images/tabMobile/light_progress_h.png');
     }
 
     .brightness-btn {
@@ -490,7 +492,7 @@
     .brightness-progress {
         height          : 100%;
         width           : 12px;
-        background-image: url('../../assets/images/tabMobile/light_progress.png');
+        background-image: url('../../assets/images/tabMobile/light_progress_s.png');
     }
 
     .brightness-btn {
