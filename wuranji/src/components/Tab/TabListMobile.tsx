@@ -18,15 +18,25 @@ let isTouchStart = false;
 let startPos = 0;
 let oldPos = 0;
 
+function preventDefaultFn() {
+    document.body.addEventListener('touchstart', (ev) => {
+        ev.preventDefault();
+    }, false);
+    document.body.addEventListener('touchmove', (ev) => {
+        ev.preventDefault();
+    }, false);
+}
+
 function TabListMobile() {
     const { current, part } = useSelector((state: State) => state.system);
 
     const [orientation, setOrientation] = useState('');
     const [rotateCurrent, setRotate] = useState(rotate[0]);
     const [structureCurrent, setStructure] = useState('');
-    const [light, setLight] = useState(6);
+    const [light, setLight] = useState(50);
 
     window.addEventListener('load', VorH, false);
+    window.addEventListener('load', preventDefaultFn, false);
 
     useEffect(() => {
         setStructure('');
@@ -118,6 +128,8 @@ function TabListMobile() {
         if (ev.changedTouches.length === 0) return;
         isTouchStart = true;
 
+        ev.preventDefault();
+
         const { clientX, clientY } = ev.changedTouches[0];
         startPos = orientation === orient[0] ? clientY : clientX;
         oldPos = light;
@@ -126,6 +138,8 @@ function TabListMobile() {
     function brightnessTouchMove(ev: React.TouchEvent) {
         if (!isTouchStart) return;
         if (ev.changedTouches.length === 0) return;
+
+        ev.preventDefault();
 
         const { clientX, clientY } = ev.changedTouches[0];
         const movePos = orientation === orient[0] ? clientY : clientX;
