@@ -25,14 +25,14 @@ function TabListMobile() {
     const [rotateCurrent, setRotate] = useState(rotate[0]);
     const [structureCurrent, setStructure] = useState('');
     const [light, setLight] = useState(50);
-
-    window.addEventListener('load', VorH, false);
-
+    
+    
     useEffect(() => {
         setStructure('');
     }, [current]);
-
+    
     useEffect(() => {
+        VorH();
         window.addEventListener('orientationchange', VorH, false);
 
         return () => window.removeEventListener('orientationchange', VorH, false);
@@ -40,12 +40,10 @@ function TabListMobile() {
 
     function VorH() {
         isTouchStart = false;
-        if (window.orientation == 90 || window.orientation == -90) {
+        if (window.orientation === 90 || window.orientation === -90) {
             setOrientation(orient[0]);
-            document.body.style.touchAction = 'pan-x';
-        } else if (window.orientation == 0 || window.orientation == 180) {
+        } else if (window.orientation === 0 || window.orientation === 180) {
             setOrientation(orient[1]);
-            document.body.style.touchAction = 'pan-y';
         }
 
     }
@@ -121,8 +119,6 @@ function TabListMobile() {
         if (ev.changedTouches.length === 0) return;
         isTouchStart = true;
 
-        ev.preventDefault();
-
         const { clientX, clientY } = ev.changedTouches[0];
         startPos = orientation === orient[0] ? clientY : clientX;
         oldPos = light;
@@ -131,8 +127,6 @@ function TabListMobile() {
     function brightnessTouchMove(ev: React.TouchEvent) {
         if (!isTouchStart) return;
         if (ev.changedTouches.length === 0) return;
-
-        ev.preventDefault();
 
         const { clientX, clientY } = ev.changedTouches[0];
         const movePos = orientation === orient[0] ? clientY : clientX;
@@ -175,6 +169,7 @@ function TabListMobile() {
     }
 
     function onTouchEnd(current: string) {
+        if (part === '') return;
         if (part !== current) {
             message.error('放置位置错误!');
             return;

@@ -29,7 +29,7 @@ function Index() {
             <Loading className={isLoading ? '' : 'hidden-loading'} />
             <Start />
             <Tab />
-            {/* <Three /> */}
+            <Three />
             <FullButton />
             <Roaming />
             <Back />

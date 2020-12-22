@@ -17,7 +17,7 @@ import './tab.css';
 const listName = ['视角', '结构', '拆装'];
 
 function Home() {
-    const { current } = useSelector((state: State) => state.system);
+    const { current, isStart } = useSelector((state: State) => state.system);
 
     return (
         <>
@@ -30,8 +30,15 @@ function Home() {
                         </>
                         :
                         <>
-                            <TabListMobile />
-                            <TabControlMobile />
+                            {
+                                isStart ?
+                                    <>
+                                        <TabListMobile />
+                                        <TabControlMobile />
+                                    </>
+                                    :
+                                    ''
+                            }
                         </>
                 }
             </div>

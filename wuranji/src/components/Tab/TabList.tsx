@@ -16,7 +16,8 @@ function TabList() {
     }
 
     function mouseUpFn(index: number) {
-        if(part !== list[index]) {
+        if (part === '') return;
+        if (part !== list[index]) {
             message.error('放置位置错误!');
             return;
         }
