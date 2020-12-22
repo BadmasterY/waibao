@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 import { InitReturn } from '../../../interfaces/init';
 import isPC from '../../../utils/isPC';
-// import loader from '../modules/loader';
+import loader from '../modules/loader';
 
 /**
  * this is a page template
@@ -14,6 +14,8 @@ import isPC from '../../../utils/isPC';
 function Template(initReturn: InitReturn, setTotal: (number: number) => void, setLoaded: (loaded?: number) => void, setCurrentPart: (partName: string) => void) {
     const { scene } = initReturn;
 
+    THREE.Cache.enabled = true;
+
     const pageGroup = new THREE.Group();
     pageGroup.name = 'template'; // name, E.g: `'template'`
 
@@ -21,7 +23,7 @@ function Template(initReturn: InitReturn, setTotal: (number: number) => void, se
     // 通过 isPC 判断模型数量
     // pc: 2
     // mobile: 1
-    setTotal(0);
+    setTotal(1);
     scene.add(pageGroup); // add to scene
 
     // animate callback
@@ -31,16 +33,22 @@ function Template(initReturn: InitReturn, setTotal: (number: number) => void, se
     // promise array
     const promise: (Promise<any> | THREE.Group)[] = [];
 
-    // const p1 = new Promise((resolve, reject) => {
-    //     loader(require('../../../assets/models/qiu.fbx')).then(group => {
-    //         // 成功加载之后调用
-    //         setLoaded();
+    console.log(require('../../../assets/models/ChuWuJi_DH.fbx'));
 
-    //         resolve();
-    //     }).catch(err => reject(err));
-    // });
+    const url = require('../../../assets/models/ChuWuJi_DH.fbx').default;
+    console.log(url);
+    const p1 = new Promise<null>((resolve, reject) => {
+        loader(url).then(group => {
+            // 成功加载之后调用
+            setLoaded();
 
-    // promise.push(p1);
+            console.log(group);
+
+            resolve(null);
+        }).catch(err => reject(err));
+    });
+
+    promise.push(p1);
 
     promise.push(pageGroup);
 
