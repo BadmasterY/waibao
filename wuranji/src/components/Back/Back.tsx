@@ -3,6 +3,7 @@ import { useDispatch } from 'react-redux';
 
 import { actions } from '../../redux/ducks/system';
 import { pubSub } from '../../utils/pubSub';
+import isPC from '../../utils/isPC';
 
 import './back.css';
 
@@ -17,7 +18,14 @@ function Back() {
     }
 
     return (
-        <div id="back" onClick={goBack}></div>
+        <>
+            {
+                isPC ?
+                    <div id="back" onClick={goBack}></div>
+                    :
+                    ''
+            }
+        </>
     );
 }
 

@@ -11,14 +11,16 @@ export const types = {
     START: 'systemStart',
     CURRENT: 'systemSetCurrent',
     PART: 'systemSetPart',
+    ROAMING: 'systemSetRoaming',
 };
 
 const initialState: State = {
-    isLoading: true,
+    isLoading: false,
     isStart: false,
+    isRoaming: false,
     total: 0,
     loaded: 0,
-    current: 0,
+    current: '',
     part: '',
 };
 
@@ -32,6 +34,11 @@ export default function reducer(state = initialState, action: Action) {
             if (payload?.isStart !== undefined)
                 startState.isStart = payload.isStart;
             return startState;
+        case types.ROAMING:
+            const roamingState = Object.assign({}, state);
+            if (payload?.isRoaming !== undefined)
+                roamingState.isRoaming = payload.isRoaming;
+            return roamingState;
         case types.LOADED:
             const loadedState = Object.assign({}, state);
             if (payload?.loaded !== undefined) {
@@ -67,4 +74,5 @@ export const actions = {
     systemTotal: (payload: Payload) => ({ type: types.TOTAL, payload }),
     systemSetCurrent: (payload: Payload) => ({ type: types.CURRENT, payload }),
     systemSetPart: (payload: Payload) => ({ type: types.PART, payload }),
+    systemSetRoaming: (payload: Payload) => ({ type: types.ROAMING, payload }),
 };

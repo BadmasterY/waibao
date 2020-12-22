@@ -1,10 +1,10 @@
-#roaming {
+#roaming,
+#view {
     width              : 45px;
     height             : 45px;
     position           : absolute;
     bottom             : 20px;
     left               : 20px;
-    background-image   : url('../../assets/images/roaming/btn.png');
     background-position: center;
     background-repeat  : no-repeat;
     background-size    : contain;
@@ -12,23 +12,18 @@
     transition         : all .3s;
 }
 
+#roaming {
+    background-image: url('../../assets/images/roaming/btn.png');
+}
+
+#view {
+    background-image: url('../../assets/images/roaming/view.png');
+}
+
 #roaming:hover {
     background-image: url('../../assets/images/roaming/btn_hover.png');
 }
 
-#isRoaming {
-    width              : 45px;
-    height             : 45px;
-    position           : absolute;
-    bottom             : 20px;
-    left               : 20px;
-    background-image   : url('../../assets/images/roaming/btn_hover.png');
-    background-position: center;
-    background-repeat  : no-repeat;
-    background-size    : contain;
-    cursor             : pointer;
-}
-
-#roaming-mobile {
-    display: none;
+#view:hover {
+    background-image: url('../../assets/images/roaming/view_hover.png');
 }

@@ -5,18 +5,23 @@ import TabTitle from './TabTitle';
 import TabContent from './TabContent';
 import TabList from './TabList';
 
+import TabListMobile from './TabListMobile';
+import TabControlMobile from './TabControlMobile';
+
 import isPC from '../../utils/isPC';
 
 import { State } from '../../interfaces/state';
 
 import './tab.css';
 
+const listName = ['视角', '结构', '拆装'];
+
 function Home() {
     const { current } = useSelector((state: State) => state.system);
 
     return (
         <>
-            <div id="tab">
+            <div id={isPC ? "tab" : "tab-mobile"}>
                 {
                     isPC ?
                         <>
@@ -24,11 +29,14 @@ function Home() {
                             <TabContent />
                         </>
                         :
-                        <>mobile</>
+                        <>
+                            <TabListMobile />
+                            <TabControlMobile />
+                        </>
                 }
             </div>
             {
-                isPC && current === 2 ?
+                isPC && current === listName[2] ?
                     <TabList />
                     :
                     ''

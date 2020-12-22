@@ -25,6 +25,11 @@ function TabList() {
         pubSub.publish('onDisassembly');
     }
 
+    // 重置
+    function reset() {
+        pubSub.publish('reset');
+    }
+
     return (
         <div id="tab-list">
             <ul>
@@ -42,6 +47,7 @@ function TabList() {
                     ))
                 }
             </ul>
+            <div className="list-reset" onClick={reset}></div>
         </div>
     );
 }

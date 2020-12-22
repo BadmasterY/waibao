@@ -2,7 +2,8 @@ export interface SystemPayload {
     total?: number;
     loaded?: number;
     isStart?: boolean;
-    current?: number;
+    isRoaming?: boolean;
+    current?: string;
     part?: string;
 }
 
@@ -14,8 +15,9 @@ export interface SystemAction {
 export interface SystemState {
     isLoading: boolean;
     isStart: boolean;
+    isRoaming: boolean;
     total: number;
     loaded: number;
-    current: number;
+    current: string;
     part: string;
 }

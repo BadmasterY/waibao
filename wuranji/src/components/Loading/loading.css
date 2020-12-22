@@ -86,7 +86,15 @@
     }
 }
 
-@media screen and (max-width: 375px) {
+/* 竖屏 */
+@media screen and (orientation:portrait) {
+    .loading-box {
+        width: 75%;
+    }
+}
+
+/* 横屏 */
+@media screen and (orientation:landscape) {
     .loading-box {
         width: 75%;
     }

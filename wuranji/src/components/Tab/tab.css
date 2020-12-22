@@ -123,7 +123,7 @@
 }
 
 #tab-list {
-    position        : fixed;
+    position        : absolute;
     top             : 50%;
     right           : 20px;
     width           : 100px;
@@ -187,4 +187,314 @@
 .item-img-3 {
     background-image: url('../../assets/images/tab/qdzz.png');
     background-size : 70%;
+}
+
+#tab-list .list-reset {
+    position           : absolute;
+    width              : 35px;
+    height             : 35px;
+    left               : -15px;
+    bottom             : -15px;
+    background-image   : url('../../assets/images/tab/reset.png');
+    background-position: center;
+    background-repeat  : no-repeat;
+    background-size    : contain;
+    transition         : all .3s;
+    cursor             : pointer;
+}
+
+#tab-list .list-reset:hover {
+    background-image: url('../../assets/images/tab/reset_hover.png');
+}
+
+#tab-control-mobile {
+    position: absolute;
+}
+
+#tab-control-mobile .control-list {
+    margin    : 0;
+    padding   : 0;
+    list-style: none;
+}
+
+#tab-control-mobile .control-list .list-item {
+    width              : 45px;
+    height             : 45px;
+    background-position: center;
+    background-repeat  : no-repeat;
+    background-size    : contain;
+    transition         : all .3s;
+}
+
+#tab-control-mobile .list-item-0 {
+    background-image: url('../../assets/images/tabMobile/xz.png');
+}
+
+#tab-control-mobile .list-item-1 {
+    background-image: url('../../assets/images/tabMobile/jg.png');
+}
+
+#tab-control-mobile .list-item-2 {
+    background-image: url('../../assets/images/tabMobile/ld.png');
+}
+
+#tab-control-mobile .list-item-3 {
+    background-image: url('../../assets/images/tabMobile/cz.png');
+}
+
+#tab-control-mobile .current-item-0 {
+    background-image: url('../../assets/images/tabMobile/xz_current.png');
+}
+
+#tab-control-mobile .current-item-1 {
+    background-image: url('../../assets/images/tabMobile/jg_current.png');
+}
+
+#tab-control-mobile .current-item-2 {
+    background-image: url('../../assets/images/tabMobile/ld_current.png');
+}
+
+#tab-control-mobile .current-item-3 {
+    background-image: url('../../assets/images/tabMobile/cz_current.png');
+}
+
+#tab-list-mobile {
+    position: absolute;
+}
+
+#tab-list-mobile .mobile-list {
+    list-style: none;
+    margin    : 0;
+    padding   : 0;
+    position  : absolute;
+}
+
+#tab-list-mobile .mobile-list .list-item {
+    width              : 75px;
+    height             : 75px;
+    padding            : 5px;
+    background-position: center;
+    background-repeat  : no-repeat;
+    background-size    : contain;
+    transition         : all .3s;
+}
+
+.rotate-0 {
+    background-image: url('../../assets/images/tabMobile/default.png');
+}
+
+.rotate-1 {
+    background-image: url('../../assets/images/tabMobile/x.png');
+}
+
+.rotate-2 {
+    background-image: url('../../assets/images/tabMobile/y.png');
+}
+
+.rotate-3 {
+    background-image: url('../../assets/images/tabMobile/z.png');
+}
+
+.rotate-current-0 {
+    background-image: url('../../assets/images/tabMobile/default_current.png');
+}
+
+.rotate-current-1 {
+    background-image: url('../../assets/images/tabMobile/x_current.png');
+}
+
+.rotate-current-2 {
+    background-image: url('../../assets/images/tabMobile/y_current.png');
+}
+
+.rotate-current-3 {
+    background-image: url('../../assets/images/tabMobile/z_current.png');
+}
+
+#tab-list-mobile .mobile-list .list-item p {
+    text-align: center;
+    color     : #fff;
+    font-size : .8em;
+}
+
+#tab-list-mobile .structure {
+    background-color: #7183b2;
+    border-radius   : 3px;
+}
+
+#tab-list-mobile .structure-current {
+    background-color: #afc1f2;
+}
+
+#tab-list-mobile .list-bg {
+    width              : 45px;
+    height             : 45px;
+    margin             : 0 auto;
+    background-position: center;
+    background-repeat  : no-repeat;
+    background-size    : contain;
+}
+
+#tab-list-mobile .list-bg-0 {
+    background-image: url('../../assets/images/tabMobile/jsj.png');
+}
+
+#tab-list-mobile .list-bg-1 {
+    background-image: url('../../assets/images/tabMobile/pc.png');
+}
+
+#tab-list-mobile .list-bg-2 {
+    background-image: url('../../assets/images/tabMobile/qdzz.png');
+}
+
+#tab-list-mobile .list-bg-3 {
+    background-image: url('../../assets/images/tabMobile/jc.png');
+}
+
+.list-brightness {
+    position        : absolute;
+    top             : 50%;
+    left            : 50%;
+    transform       : translate(-50%, -50%);
+}
+
+.brightness-progress {
+    background-position: center;
+    background-repeat  : no-repeat;
+    background-size    : contain;
+    margin             : 0 auto;
+}
+
+.brightness-btn {
+    width              : 28px;
+    height             : 28px;
+    background-image   : url('../../assets/images/tabMobile/light_btn.png');
+    background-position: center;
+    background-repeat  : no-repeat;
+    background-size    : contain;
+    position           : absolute;
+}
+
+.brightness-btn:hover {
+    /* background-image: url('../../assets/images/tabMobile/light_btn_current.png'); */
+}
+
+/* 竖屏 */
+@media screen and (orientation:portrait) {
+    #tab-mobile {
+        width    : 100%;
+        height   : 100%;
+        position : absolute;
+        bottom   : 0;
+        left     : 0;
+        transform: none;
+    }
+
+    #tab-control-mobile {
+        width  : 100%;
+        height : 65px;
+        bottom : 0;
+        left   : 0;
+        padding: 10px;
+    }
+
+    #tab-control-mobile .control-list {
+        position : absolute;
+        top      : 10px;
+        left     : 50%;
+        width    : 212px;
+        height   : 45px;
+        transform: translateX(-50%);
+    }
+
+    #tab-control-mobile .control-list .list-item {
+        margin-right: 8px;
+        float       : left;
+    }
+
+    #tab-list-mobile {
+        width : 100%;
+        height: 75px;
+        bottom: 65px;
+        left  : 0;
+    }
+
+    #tab-list-mobile .mobile-list {
+        width    : 320px;
+        top      : 0;
+        left     : 50%;
+        transform: translateX(-50%);
+    }
+
+    #tab-list-mobile .mobile-list .list-item {
+        float       : left;
+        margin-right: 5px;
+    }
+
+    .list-brightness {
+        width : 260px;
+        height: 28px;
+    }
+
+    .brightness-progress {
+        width : 100%;
+        height: 12px;
+    }
+
+    .brightness-btn {
+        top      : 0;
+        transform: translateX(-50%);
+    }
+}
+
+/* 横屏 */
+@media screen and (orientation:landscape) {
+    #tab-mobile {
+        width    : 100%;
+        height   : 100%;
+        position : absolute;
+        bottom   : 0;
+        left     : 0;
+        transform: none;
+    }
+
+    #tab-control-mobile {
+        width : 45px;
+        height: auto;
+        bottom: 10px;
+        left  : 10px;
+    }
+
+    #tab-control-mobile .control-list .list-item {
+        margin-bottom: 8px;
+    }
+
+    #tab-list-mobile {
+        width     : 75px;
+        height    : 212px;
+        bottom    : 10px;
+        right     : 10px;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    #tab-list-mobile .mobile-list .list-item {
+        margin-bottom: 5px;
+    }
+
+    .list-brightness {
+        height: 100%;
+        width : 28px;
+    }
+
+    .brightness-progress {
+        height          : 100%;
+        width           : 12px;
+        background-image: url('../../assets/images/tabMobile/light_progress.png');
+    }
+
+    .brightness-btn {
+        left     : 0;
+        transform: translateY(50%);
+    }
 }

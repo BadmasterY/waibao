@@ -5,6 +5,7 @@ import { pubSub } from '../../utils/pubSub';
 
 import { State } from '../../interfaces/state';
 
+const listName = ['视角', '结构', '拆装'];
 const perspectiveList = ['主视角', '俯视角', '左视角'];
 const structureList = ['减速机', '耙齿', '驱动装置', '机架'];
 
@@ -79,13 +80,13 @@ function TabContent() {
     return (
         <div id="tab-content">
             {
-                current === 0 ? renderPerspective() : ''
+                current === listName[0] ? renderPerspective() : ''
             }
             {
-                current === 1 ? renderStructure() : ''
+                current === listName[1] ? renderStructure() : ''
             }
             {
-                current === 2 ? renderDisassembly() : ''
+                current === listName[2] ? renderDisassembly() : ''
             }
         </div>
     );
