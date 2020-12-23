@@ -1,8 +1,5 @@
 import * as THREE from 'three';
-import { Vector3 } from 'three';
-import { useDispatch } from 'react-redux';
 import { InitReturn } from '../../../interfaces/init';
-
 import { pubSub } from '../../../utils/pubSub';
 import loader from '../modules/loader';
 
@@ -16,6 +13,7 @@ import loader from '../modules/loader';
 function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoaded: (loaded?: number) => void, setCurrentPart: (partName: string) => void) {
     const { scene, camera } = initReturn;
     THREE.Cache.enabled = true;
+    let isstart:boolean = false;
 
     const pageGroup = new THREE.Group();
     pageGroup.name = 'Page'; 
@@ -31,52 +29,6 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
     function callback() {
     }
 
-
-    pubSub.publish('changePerspective', function( str: string){
-        console.log(str);
-        
-        if(str == "主视角"){
-            console.log(0);
-            camera.position.set(0,1.5,5);
-            camera.rotation.set(0, 0, 0);
-        }else if(str == "俯视角"){
-            console.log(1);
-            camera.position.set(-1.5,1.5,5);
-            camera.rotation.set( Math.PI/2, 0, 0);
-            
-        }else if(str == "左视角"){
-            console.log(2);
-            camera.position.set(-1.5,1.5,5);
-            camera.rotation.set( 0, Math.PI/2, 0);
-
-        }
-    });
-
-    pubSub.publish('changeStructure', function( str: string){
-        console.log(str);
-        
-        if(str == "减速机"){
-            
-        }
-        else if(str == "耙齿"){
-            
-            
-        }
-        else if(str == "驱动装置"){
-            
-
-        }
-        else if(str == "机架"){
-            
-
-        }
-    });
-
-
-
-  
-
-
     // promise array
     const promise: (Promise<any> | THREE.Group)[] = [];
 
@@ -89,7 +41,7 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
             // 成功加载之后调用
             setLoaded();
             group.scale.set(0.003,0.003,0.003);
-            group.rotateOnWorldAxis(new Vector3(0,1,0), Math.PI/4);
+            // group.rotateOnWorldAxis(new Vector3(0,1,0), Math.PI/4);
 
             //动画编写
             console.log(group.animations.length);
@@ -120,6 +72,130 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
 
     promise.push(pageGroup);
     scene.add(pageGroup);
+
+    pubSub.subscribe('changePerspective', function( str: string){
+        // console.log(pageGroup.children[1]);
+        
+        if(str === "主视角"){
+            camera.position.set(0,0,5);
+            camera.rotation.set(0, 0, 0);
+        }else if(str === "俯视角"){
+            console.log(1);
+            camera.position.set(0,5,0);
+            camera.rotation.set( -Math.PI/2, 0, 0);
+            
+        }else if(str === "左视角"){
+            console.log(2);
+            camera.position.set(-5,0,0);
+            camera.rotation.set( 0, -Math.PI/2, 0);
+
+        }
+    });
+
+    document.addEventListener("keydown", function(event)
+    {
+            if(event.key == "w" && camera.position.z > 2.5){
+                camera.position.z -= 0.5;
+            }
+
+            if(event.key == "s" && camera.position.z < 10){
+                camera.position.z += 0.5;
+            }
+
+            if(event.key == "a" && camera.position.x > -5){
+                camera.position.x -= 0.5;
+            }
+
+            if(event.key == "d" && camera.position.x < 5){
+                camera.position.x += 0.5;
+            }
+        
+    });
+
+    document.addEventListener("mousedown", function(event){
+
+        event.preventDefault();
+             
+             console.log(event.button);
+             if(event.button == 2){
+                console.log(event);
+                isstart = true;
+                let mouseX = event.clientX;//出发事件时的鼠标指针的水平坐标
+
+    //     rotateStart.set( event.clientX, event.clientY );
+    //     document.addEventListener( 'mousemove', onMouseMove2, false );
+            }
+        });
+        document.addEventListener("mousemove", function(event){
+            
+            
+        });
+        document.addEventListener("mouseup", function(event){
+            
+            event.preventDefault();
+            
+            console.log(event.button);
+            if(event.button == 2){
+                console.log(event);
+                isstart = false;
+             }
+    });
+    
+    // document.addEventListener("mousedown", function(event)
+    // {
+    //      event.preventDefault();
+    //      mouseDown = 
+    //      console.log(event.button);
+    //      if(event.button == 2){
+
+    //      }
+        
+    // });
+
+    // function onMouseDown(event){
+    //     event.preventDefault();
+    //     mouseDown = true;
+    //     mouseX = event.clientX;//出发事件时的鼠标指针的水平坐标
+
+    //     rotateStart.set( event.clientX, event.clientY );
+    //     document.addEventListener( 'mousemove', onMouseMove2, false );
+    // }
+
+    // function onMouseup(event){      
+    //     mouseDown = false;
+
+    //     document.removeEventListener("mousemove", onMouseMove2);
+    // }
+
+    // function onMouseMove2(event){
+    //     if(!mouseDown){
+    //         return;
+    //     }       
+    //     var deltaX = event.clientX - mouseX;
+    //     mouseX = event.clientX;
+    //     rotateScene(deltaX);        
+    // }
+    
+
+    pubSub.subscribe('changeStructure', function( str: string){
+        console.log(str);
+        
+        if(str === "减速机"){
+            
+        }
+        else if(str === "耙齿"){
+            
+            
+        }
+        else if(str === "驱动装置"){
+            
+
+        }
+        else if(str === "机架"){
+            
+
+        }
+    });
 
     return {
         name: 'Page',

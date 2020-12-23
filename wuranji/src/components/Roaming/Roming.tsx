@@ -10,20 +10,20 @@ import { State } from '../../interfaces/state';
 import './roaming.css';
 
 function Roaming() {
-    const { isRoaming } = useSelector((state: State) => state.system);
+    const { isRoaming, isTrigger } = useSelector((state: State) => state.system);
     const dispatch = useDispatch();
 
     function enterRoaming() {
         pubSub.publish('enterRoaming');
 
-        const action = actions.systemSetRoaming({ isRoaming: true });
+        const action = actions.systemSetRoaming({ isRoaming: true, isTrigger: "enterRoaming" });
         dispatch(action);
     }
 
     function leaveRoaming() {
         pubSub.publish('leaveRoaming');
 
-        const action = actions.systemSetRoaming({ isRoaming: false });
+        const action = actions.systemSetRoaming({ isRoaming: false, isTrigger: "leaveRoaming" });
         dispatch(action);
     }
 

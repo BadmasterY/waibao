@@ -22,6 +22,7 @@ const initialState: State = {
     loaded: 0,
     current: '',
     part: '',
+    isTrigger: ''
 };
 
 export default function reducer(state = initialState, action: Action) {

@@ -5,6 +5,7 @@ export interface SystemPayload {
     isRoaming?: boolean;
     current?: string;
     part?: string;
+    isTrigger?:string;
 }
 
 export interface SystemAction {
@@ -16,6 +17,7 @@ export interface SystemState {
     isLoading: boolean;
     isStart: boolean;
     isRoaming: boolean;
+    isTrigger: string;
     total: number;
     loaded: number;
     current: string;
