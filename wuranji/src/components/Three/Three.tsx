@@ -12,6 +12,7 @@ import { actions } from '../../redux/ducks/system';
 import { State } from '../../interfaces/state';
 
 import './three.css';
+import Page from './page/Page';
 
 function Three() {
     const dispatch = useDispatch();
@@ -26,9 +27,9 @@ function Three() {
 
         const initReturn = initFn('three');
 
-        const template = Template(initReturn, setTotal, setLoaded, setCurrentPart);
+        const page = Page(initReturn, setTotal, setLoaded, setCurrentPart);
 
-        const { name, promise, callback } = template;
+        const { name, promise, callback } = page;
 
         Promise.all(promise).then(() => {
             loaded();
