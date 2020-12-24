@@ -40,8 +40,8 @@ function Three() {
         });
 
         animate(initReturn, () => {
-            if (isLoading) return;
-            if (!isStart) return;
+            // if (isLoading) return;
+            // if (!isStart) return;
             // 处理一些回调
             callback();
         });
