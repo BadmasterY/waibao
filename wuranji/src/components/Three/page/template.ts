@@ -50,7 +50,7 @@ function Template(initReturn: InitReturn, setTotal: (number: number) => void, se
             group.scale.set(0.005, 0.005, 0.005);
             group.rotateOnWorldAxis(new Vector3(0, 1, 0), Math.PI / 4);
 
-            pageGroup.add(group);
+            // pageGroup.add(group);
             resolve(null);
         }).catch(err => reject(err));
     });
@@ -79,6 +79,15 @@ function Template(initReturn: InitReturn, setTotal: (number: number) => void, se
             gltf.animations.forEach(animate => {
                 mixer.clipAction(animate).play();
             });
+
+            const m = gltf.scene;
+            m.scale.set(.5, .5, .5);
+
+            pageGroup.add(m);
+
+            console.log(mixer);
+
+            resolve(null);
 
         });
     });
