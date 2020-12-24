@@ -1,22 +1,19 @@
 import React, { useEffect } from 'react';
 import { message } from 'antd';
-import { useSelector, useDispatch } from 'react-redux';
+import { useDispatch } from 'react-redux';
 
 import isPC from '../../utils/isPC';
 import initFn from './modules/init';
 import animate, { setAnimation } from './modules/animate';
 
-import Template from './page/template';
+import Page from './page/page';
 
 import { actions } from '../../redux/ducks/system';
-import { State } from '../../interfaces/state';
 
 import './three.css';
-import Page from './page/page';
 
 function Three() {
     const dispatch = useDispatch();
-    const { isLoading, isStart } = useSelector((state: State) => state.system);
 
     function init() {
         if (isPC) {
@@ -25,11 +22,11 @@ function Three() {
             message.info('mobile');
         }
 
-        const initReturn = initFn('three');
+        const initReturn = initFn('three', true);
 
         const page = Page(initReturn, setTotal, setLoaded, setCurrentPart);
 
-        const { name, promise, callback } = page;
+        const { promise, callback } = page;
 
         Promise.all(promise).then(() => {
             loaded();
@@ -40,8 +37,6 @@ function Three() {
         });
 
         animate(initReturn, () => {
-            // if (isLoading) return;
-            // if (!isStart) return;
             // 处理一些回调
             callback();
         });

@@ -2,8 +2,6 @@ import * as THREE from 'three';
 import { Vector3 } from 'three';
 
 import { InitReturn } from '../../../interfaces/init';
-import isPC from '../../../utils/isPC';
-import animate from '../modules/animate';
 import loader, { gltfLoader } from '../modules/loader';
 
 /**
@@ -14,7 +12,7 @@ import loader, { gltfLoader } from '../modules/loader';
  * @param setLoaded setLoaded function, once after loading each model
  */
 function Template(initReturn: InitReturn, setTotal: (number: number) => void, setLoaded: (loaded?: number) => void, setCurrentPart: (partName: string) => void) {
-    const { scene, camera } = initReturn;
+    const { scene } = initReturn;
 
     THREE.Cache.enabled = true;
 

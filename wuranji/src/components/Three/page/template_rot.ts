@@ -15,9 +15,8 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
  * @param setLoaded setLoaded function, once after loading each model
  */
 function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoaded: (loaded?: number) => void, setCurrentPart: (partName: string) => void) {
-    const { scene, camera, renderer } = initReturn;
+    const { scene, camera } = initReturn;
     THREE.Cache.enabled = true;
-    let isstart: boolean = false;
 
     const pageGroup = new THREE.Group();
     pageGroup.name = 'Page';
@@ -156,10 +155,8 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
         event.preventDefault();
 
         console.log(event.button);
-        if (event.button == 2) {
+        if (event.button === 2) {
             console.log(event);
-            isstart = true;
-            let mouseX = event.clientX;//出发事件时的鼠标指针的水平坐标
 
             //     rotateStart.set( event.clientX, event.clientY );
             //     document.addEventListener( 'mousemove', onMouseMove2, false );
@@ -174,9 +171,8 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
         event.preventDefault();
 
         console.log(event.button);
-        if (event.button == 2) {
+        if (event.button === 2) {
             console.log(event);
-            isstart = false;
         }
     });
 

@@ -3,7 +3,11 @@ import { InitReturn } from '../../../interfaces/init';
 import { pubSub } from '../../../utils/pubSub';
 // import loader from '../modules/loader';
 import loader, { gltfLoader } from '../modules/loader';
-import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import isPC from '../../../utils/isPC';
+import createAnimate from '../modules/createAnimate';
+import { Tween } from '@tweenjs/tween.js';
+import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass';
 
 /**
  * this is a page page
@@ -13,41 +17,81 @@ import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls';
  * @param setLoaded setLoaded function, once after loading each model
  */
 function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoaded: (loaded?: number) => void, setCurrentPart: (partName: string) => void) {
-    const { scene, camera, dom } = initReturn;
+    const { scene, camera, renderer, composer } = initReturn;
     let mixer: THREE.AnimationMixer;
     const clock = new THREE.Clock(true);
     THREE.Cache.enabled = true;
-    let isstart:boolean = false;
+
+    let outlinePass: OutlinePass;
+    let selectedObjects: THREE.Object3D[] = [];
+    const modles: Record<string, THREE.Object3D> = {};
+    const moveModles: Record<string, THREE.Object3D> = {};
+    let rotation: 'default' | 'x' | 'y' | 'z' = 'default';
+    let isAssembly = false;
+    let isDisassebly = false;
+
+    const cloneMaterial = new THREE.Material();
+
     const pageGroup = new THREE.Group();
-    pageGroup.name = 'Page'; 
-    let mouseDown:boolean = false;
-    let mouseX:number = 0;
-    const controls = new OrbitControls( camera, document.body );
+    pageGroup.name = 'Page';
+
+    if (!isPC) {
+        const bg = new THREE.TextureLoader().load(require('../../../assets/images/bg.png').default);
+        scene.background = bg;
+    }
+
+    const body = isPC ? document.body : renderer.domElement;
+    const controls = new OrbitControls(camera, body);
+    controls.enabled = !isPC;
     controls.enablePan = true;
     controls.enableZoom = false;
     controls.enableKeys = true;
     controls.minDistance = 5;
     controls.maxDistance = 7;
     controls.keyPanSpeed = 7;
-    controls.mouseButtons = {
-        RIGHT:THREE.MOUSE.ROTATE,
-        LEFT: THREE.MOUSE.DOLLY,
-        MIDDLE:THREE.MOUSE.DOLLY
+    if (isPC) controls.maxPolarAngle = Math.PI / (8 / 9);
 
+    controls.mouseButtons = {
+        RIGHT: THREE.MOUSE.ROTATE,
+        LEFT: THREE.MOUSE.DOLLY,
+        MIDDLE: THREE.MOUSE.DOLLY,
     }
+
     controls.keys = {
         UP: 87,
         BOTTOM: 83,
         LEFT: 65,
         RIGHT: 68,
     }
-    
+
+    controls.addEventListener('change', () => {
+        if (!isPC) return;
+        if (camera.position.y < 1) {
+            camera.position.copy(camera.userData.lastPosition);
+            controls.target.copy(camera.userData.lastTarget);
+        } else {
+            camera.userData.lastPosition = camera.position.clone();
+            camera.userData.lastTarget = controls.target.clone();
+        }
+    });
+
+    if (composer) {
+        outlinePass = new OutlinePass(new THREE.Vector2(window.innerWidth, window.innerHeight), scene, camera);
+        outlinePass.selectedObjects = selectedObjects;
+        outlinePass.pulsePeriod = 5;
+        outlinePass.edgeThickness = 4;
+        outlinePass.edgeStrength = 10;
+        outlinePass.visibleEdgeColor = new THREE.Color('0xfc8888');
+        outlinePass.hiddenEdgeColor = new THREE.Color('0x190a05');
+        composer.addPass(outlinePass);
+    }
 
     // number of modules
     // 通过 isPC 判断模型数量
     // pc: 2
     // mobile: 1
-    setTotal(2);
+    const total = isPC ? 2 : 1;
+    setTotal(total);
     scene.add(pageGroup); // add to scene
 
     // animate callback
@@ -59,184 +103,293 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
     // promise array
     const promise: (Promise<any> | THREE.Group)[] = [];
 
-    const url = require('../../../assets/models/ChuWuJi_DH.fbx').default;
-    const p1 = new Promise<null>((resolve, reject) => {
-        loader(url).then(group => {
-            // 成功加载之后调用
-            setLoaded();
-            group.scale.set(0.003,0.003,0.003);
+    if (isPC) {
+        const p2 = new Promise<null>((resolve, reject) => {
+            loader(require('../../../assets/models/ChangFang.fbx').default).then(group => {
+                // 成功加载之后调用
+                setLoaded();
+                group.scale.set(0.01, 0.01, 0.01);
+                pageGroup.add(group);
+                resolve(null);
+            }).catch(err => reject(err));
+        });
+        promise.push(p2);
+    }
 
-            //动画编写
-            const mixer = new THREE.AnimationMixer( group );
-            mixer.clipAction( group.animations[0] ).play();
-
-            //pageGroup.add(group);
-            resolve(null);
-        }).catch(err => reject(err));
-    });
-    
-    const p2 = new Promise<null>((resolve, reject) => {
-        loader(require('../../../assets/models/ChangFang.fbx').default).then(group => {
-            // 成功加载之后调用
-            setLoaded();
-            group.scale.set(0.01,0.01,0.01);
-            pageGroup.add(group);
-            resolve(null);
-        }).catch(err => reject(err));
-    });
-
+    const path = isPC ? 'ChuWuJi_DH(1).glb' : 'ChuWuJi_YDD_DH.glb';
     const p3 = new Promise<null>((resolve, reject) => {
-        gltfLoader(require('../../../assets/models/new/ChuWuJi_DH(1).glb').default).then(gltf => {
-            console.log(gltf);
-            gltf.scene.scale.set(0.5,0.5,0.5);
+        gltfLoader(require(`../../../assets/models/new/${path}`).default).then(gltf => {
+            const scale = isPC ? .7 : .6;
+            gltf.scene.scale.set(scale, scale, scale);
             pageGroup.add(gltf.scene);
             //动画编写
             mixer = new THREE.AnimationMixer(gltf.scene);
             gltf.animations.forEach(animate => {
                 mixer.clipAction(animate).play();
             });
+
+            gltf.scene.traverse(child => {
+                switch (child.name) {
+                    case 'QuDongZhuangZhi':
+                        modles.qdzz = child;
+                        moveModles.qdzz = child.clone();
+                        child.traverse(chil => {
+                            if(child.type === 'Mesh') {
+                                const c = (chil as THREE.Mesh);
+
+                            }
+                        });
+                        break;
+                    case 'PaChi':
+                        modles.pc = child;
+                        break;
+                    case 'JiJia':
+                        modles.jj = child;
+                        break;
+                    case 'JianSuJi':
+                        modles.jsj = child;
+                        break;
+                }
+            });
+
             resolve(null);
 
         }).catch(err => reject(err));
     });
 
     const HJG = new THREE.AmbientLight(0xffffff);
+    HJG.intensity = .75;
     pageGroup.add(HJG);
 
-    //promise.push(p1);
-    promise.push(p2);
+    const spotLight = new THREE.SpotLight(0xffffff, 1.5);
+    spotLight.position.set(0, 100, 50);
+    spotLight.userData.initIntensity = spotLight.intensity;
+
+    spotLight.castShadow = true;
+
+    spotLight.shadow.mapSize.width = 1024;
+    spotLight.shadow.mapSize.height = 1024;
+
+    spotLight.shadow.camera.near = 500;
+    spotLight.shadow.camera.far = 4000;
+    spotLight.shadow.camera.fov = 30;
+
+    pageGroup.add(spotLight);
+
     promise.push(p3);
 
     promise.push(pageGroup);
     scene.add(pageGroup);
 
-    pubSub.subscribe('changePerspective', function( str: string){
-        
-        if(str === "主视角"){
-            camera.position.set(0,1.5,5);
-            camera.rotation.set(0, 0, 0);
-        }else if(str === "俯视角"){
-            camera.position.set(0,5,0);
-            camera.rotation.set( -Math.PI/2, 0, 0);
-            
-        }else if(str === "左视角"){
-            camera.position.set(-5,1.5,0);
-            camera.rotation.set( 0, -Math.PI/2, 0);
+    pubSub.subscribe('changeRotate', changeRotate);
+
+    pubSub.subscribe('changePerspective', changePerspective);
+
+    pubSub.subscribe('changeStructure', changeStructure);
+
+    pubSub.subscribe('enterRoaming', () => controls.enabled = true);
+    pubSub.subscribe('leaveRoaming', () => controls.enabled = false);
+
+    pubSub.subscribe('changeLight', changeLight);
+
+    pubSub.subscribe('changeTitle', changeTitle);
+
+    pubSub.subscribe('onAssembly', () => isAssembly = true);
+
+    function changeRotate(rot: 'default' | 'x' | 'y' | 'z') {
+        rotation = rot;
+        // do somthing...
+    }
+
+    let changePerspectiveAimate: Tween<Record<string, any>> | undefined;
+    function changePerspective(str: string) {
+        changePerspectiveAimate?.stop();
+        changePerspectiveAimate = undefined;
+
+        switch (str) {
+            case "主视角":
+                changePerspectiveAimate = createAnimate({
+                    data: {
+                        posX: camera.position.x,
+                        posY: camera.position.y,
+                        posZ: camera.position.z,
+                        rotX: camera.rotation.x,
+                        rotY: camera.rotation.y,
+                        rotZ: camera.rotation.z,
+                        targetX: controls.target.x,
+                        targetY: controls.target.y,
+                        targetZ: controls.target.z,
+                    },
+                    targetData: {
+                        posX: 0,
+                        posY: 1.5,
+                        posZ: 5,
+                        rotX: 0,
+                        rotY: 0,
+                        rotZ: 0,
+                        targetX: 0,
+                        targetY: 0,
+                        targetZ: 0,
+                    },
+                    time: 300,
+                    onUpdate({
+                        posX, posY, posZ,
+                        rotX, rotY, rotZ,
+                        targetX, targetY, targetZ,
+                    }) {
+                        camera.position.set(posX, posY, posZ);
+                        camera.rotation.set(rotX, rotY, rotZ);
+                        controls.target.set(targetX, targetY, targetZ);
+                    },
+                });
+                break;
+            case "俯视角":
+                changePerspectiveAimate = createAnimate({
+                    data: {
+                        posX: camera.position.x,
+                        posY: camera.position.y,
+                        posZ: camera.position.z,
+                        rotX: camera.rotation.x,
+                        rotY: camera.rotation.y,
+                        rotZ: camera.rotation.z,
+                        targetX: controls.target.x,
+                        targetY: controls.target.y,
+                        targetZ: controls.target.z,
+                    },
+                    targetData: {
+                        posX: 0,
+                        posY: 0,
+                        posZ: 0,
+                        rotX: - Math.PI / 2,
+                        rotY: 0,
+                        rotZ: 0,
+                        targetX: 0,
+                        targetY: 0,
+                        targetZ: 0,
+                    },
+                    time: 300,
+                    onUpdate({
+                        posX, posY, posZ,
+                        rotX, rotY, rotZ,
+                        targetX, targetY, targetZ,
+                    }) {
+                        camera.position.set(posX, posY, posZ);
+                        camera.rotation.set(rotX, rotY, rotZ);
+                        controls.target.set(targetX, targetY, targetZ);
+                    },
+                });
+                break;
+            case "左视角":
+                changePerspectiveAimate = createAnimate({
+                    data: {
+                        posX: camera.position.x,
+                        posY: camera.position.y,
+                        posZ: camera.position.z,
+                        rotX: camera.rotation.x,
+                        rotY: camera.rotation.y,
+                        rotZ: camera.rotation.z,
+                        targetX: controls.target.x,
+                        targetY: controls.target.y,
+                        targetZ: controls.target.z,
+                    },
+                    targetData: {
+                        posX: -5,
+                        posY: 1.5,
+                        posZ: 0,
+                        rotX: 0,
+                        rotY: -Math.PI / 2,
+                        rotZ: 0,
+                        targetX: 0,
+                        targetY: 0,
+                        targetZ: 0,
+                    },
+                    time: 300,
+                    onUpdate({
+                        posX, posY, posZ,
+                        rotX, rotY, rotZ,
+                        targetX, targetY, targetZ,
+                    }) {
+                        camera.position.set(posX, posY, posZ);
+                        camera.rotation.set(rotX, rotY, rotZ);
+                        controls.target.set(targetX, targetY, targetZ);
+                    },
+                });
+                break;
+            default:
+                console.warn('changePerspective unkone pos:', str);
+                break;
 
         }
-    });
+    }
 
-    {/*
-    // document.addEventListener("keydown", function(event)
-    // {
-    //     if(document.getElementById("start")?.className === "" ){return;}
-    //     console.log(camera.position);
-    //     // if(event.key == "w" && camera.position.z > 2.5 ){
+    function changeStructure(str: string) {
+        selectedObjects = [];
+        switch (str) {
+            case '驱动装置':
+                selectedObjects.push(modles.qdzz);
+                break;
+            case '减速机':
+                selectedObjects.push(modles.jsj);
+                break;
+            case '机架':
+                selectedObjects.push(modles.jj);
+                break;
+            case '耙齿':
+                selectedObjects.push(modles.pc);
+                break;
+        }
+        outlinePass.selectedObjects = selectedObjects;
+    }
 
-    //     //     camera.position.x -= 0.5 * Math.sin(camera.rotation.y%Math.PI * 180 / Math.PI);
-    //     //     camera.position.z -= 0.5 * Math.cos(camera.rotation.y%Math.PI * 180 / Math.PI);
-    //     // }
+    function changeLight(oldLight: number, newLight: number) {
+        const { initIntensity } = spotLight.userData;
 
-    //     // if(event.key == "s" && camera.position.z < 10){
+        const changeLight = (newLight - 50) / 100;
+        spotLight.intensity = initIntensity + (3 * changeLight);
+    }
 
-    //     //     camera.position.x += 0.5 * Math.sin(camera.rotation.y%Math.PI * 180 / Math.PI);
-    //     //     camera.position.z += 0.5 * Math.cos(camera.rotation.y%Math.PI * 180 / Math.PI);
-    //     // }
-      
-    //         if(event.key == "w" && camera.position.z > 2.5){
-    //             // camera.rotation.set(0,Math.PI/2,0);
-    //             // 度数 = camera.rotation.y%math.pi * 180/Math.PI
-    //             // x轴距离 = 0.5*sin(度数)   z轴距离 = 0.5*cos(度数) 
-    //             camera.position.z -= 0.5;
-    //         }
+    function changeTitle(title: string) {
+        rotation = 'default';
+        selectedObjects = [];
+        outlinePass.selectedObjects = selectedObjects;
+    }
+
+    function startFn() {
+        isDisassebly = true;
+    }
     
-    //         if(event.key == "s" && camera.position.z < 10){
-    //             camera.position.z += 0.5;
-    //         }
-
-    //         if(event.key == "a" && camera.position.x > -5){
-    //             camera.position.x -= 0.5;
-    //         }
-    
-    //         if(event.key == "d" && camera.position.x < 5){
-    //             camera.position.x += 0.5;
-    //         }
-
-    // });
-
-    // document.addEventListener("mousedown", function(event){
-
-    //     event.preventDefault();
-             
-    //          if(event.button == 2){
-    //             mouseDown = true;
-    //             mouseX = event.clientX;//出发事件时的鼠标指针的水平坐标
-
-    //             // rotateStart.set( event.clientX, event.clientY );
-    //             if(document.getElementById("start")?.className !== "" ){
-
-    //                 document.addEventListener( 'mousemove', onMouseMove2, false );
-    //             }
-    //         }
-    // });
-
-    // document.addEventListener("mouseup", function(event){
-            
-    //         event.preventDefault();
-            
-    //         if(event.button == 2)
-    //         {
-    //             mouseDown = false;
-    //             document.removeEventListener("mousemove", onMouseMove2);
-    //         }
-    // });
-
-    // function onMouseMove2(event:any){
-    //     if(!mouseDown ){
-    //         return;
-    //     }       
-    //     var deltaX = event.clientX - mouseX;
-    //     mouseX = event.clientX;
-    //     rotateScene(deltaX);        
-    // }
-    
-    // function rotateScene(deltaX:number){
-    //     //设置旋转方向
-    //     var deg = deltaX/279;
-    //     //deg 设置模型旋转的弧度
-    //     //pageGroup.rotation.y += deg;
-    //     camera.rotation.y += deg;
-    //     camera.rotation.set(0,camera.rotation.y,0);
-        
-        
-    // }
-*/}
-
-
-
-    pubSub.subscribe('changeStructure', function( str: string){
-        
-        if(str === "减速机"){
-            console.log(pageGroup);
+    function moveFn() {
+        if(isAssembly || isDisassebly) {
+            controls.enabled = false;
         }
-        else if(str === "耙齿"){
-            
-            
-        }
-        else if(str === "驱动装置"){
-            
+    }
 
-        }
-        else if(str === "机架"){
-            
+    function endFn() {
 
-        }
-    });
+    }
 
+    function mouseDownFn() {
 
-    pubSub.subscribe("changeTitle",function(str:string){
-        
-    });
+    }
+
+    function touchStartFn() {
+
+    }
+
+    function mouseMoveFn() {
+    }
+
+    function touchMoveFn() {
+
+    }
+
+    function mouseUpFn() {
+
+    }
+
+    function touchEndFn() {
+
+    }
 
     return {
         name: 'Page',
