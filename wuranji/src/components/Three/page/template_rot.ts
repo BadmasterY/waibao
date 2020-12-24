@@ -22,7 +22,7 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
     const pageGroup = new THREE.Group();
     pageGroup.name = 'Page';
 
-    const controls = new OrbitControls(camera, renderer.domElement);
+    const controls = new OrbitControls(camera, document.body);
 
     controls.mouseButtons = {
         LEFT: THREE.MOUSE.DOLLY,
@@ -35,7 +35,7 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
     controls.enableKeys = true;
     controls.minDistance = 5;
     controls.maxDistance = 7;
-    controls.keyPanSpeed = .05;
+    controls.keyPanSpeed = 7;
     if (isPC) controls.maxPolarAngle = Math.PI / 2;
 
     //W:87,S:83,A:65,D:68 
