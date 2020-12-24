@@ -12,7 +12,7 @@ import { actions } from '../../redux/ducks/system';
 import { State } from '../../interfaces/state';
 
 import './three.css';
-import Page from './page/Page';
+import Page from './page/page';
 
 function Three() {
     const dispatch = useDispatch();
