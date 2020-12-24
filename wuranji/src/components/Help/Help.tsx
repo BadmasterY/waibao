@@ -9,7 +9,7 @@ import HelpContent from './HelpContent';
 import './help.css';
 
 function Help() {
-    const [showContent, setShow] = useState(false);
+    const [showContent, setShow] = useState(true);
 
     const { isRoaming } = useSelector((state: State) => state.system);
 

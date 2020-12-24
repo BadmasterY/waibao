@@ -8,6 +8,8 @@ import isPC from '../../../utils/isPC';
 import createAnimate from '../modules/createAnimate';
 import { Tween } from '@tweenjs/tween.js';
 import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass';
+import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader';
 
 /**
  * this is a page page
@@ -22,26 +24,56 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
     const clock = new THREE.Clock(true);
     THREE.Cache.enabled = true;
 
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    renderer.domElement.tabIndex = -1;
+
+    let changePerspectiveAimate: Tween<Record<string, any>> | undefined;
     let outlinePass: OutlinePass;
+    let effectFXAA: ShaderPass;
     let selectedObjects: THREE.Object3D[] = [];
     const modles: Record<string, THREE.Object3D> = {};
     const moveModles: Record<string, THREE.Object3D> = {};
     let rotation: 'default' | 'x' | 'y' | 'z' = 'default';
     let isAssembly = false;
+    let assembly = '';
     let isDisassebly = false;
+    let isAorDis = false;
+    let group: THREE.Group;
+    let cloneModle: THREE.Object3D | undefined;
+    let isInHoverBox = false;
 
-    const cloneMaterial = new THREE.Material();
+    const cloneMaterial = new THREE.MeshStandardMaterial({
+        transparent: true,
+        opacity: .4,
+        depthWrite: false,
+        color: '0xff0000',
+    });
+
+    document.addEventListener('resize', onWindowResize, false);
+
+    document.addEventListener('pointerdown', mouseDownFn, false);
+    document.addEventListener('touchstart', touchStartFn, false);
 
     const pageGroup = new THREE.Group();
     pageGroup.name = 'Page';
+
+    const geometry = new THREE.BoxBufferGeometry(1, 1, 1);
+    const material = new THREE.MeshStandardMaterial({ color: 0x00ff00, transparent: true, opacity: .4 });
+    const cube = new THREE.Mesh(geometry, material);
+    cube.scale.set(3, 7, 3);
+    cube.position.setZ(.5);
+    pageGroup.add(cube);
+
+    console.log(cube);
 
     if (!isPC) {
         const bg = new THREE.TextureLoader().load(require('../../../assets/images/bg.png').default);
         scene.background = bg;
     }
 
-    const body = isPC ? document.body : renderer.domElement;
-    const controls = new OrbitControls(camera, body);
+    const controls = new OrbitControls(camera, renderer.domElement);
     controls.enabled = !isPC;
     controls.enablePan = true;
     controls.enableZoom = false;
@@ -51,22 +83,25 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
     controls.keyPanSpeed = 7;
     if (isPC) controls.maxPolarAngle = Math.PI / (8 / 9);
 
+    camera.userData.lastPosition = camera.position.clone();
+    camera.userData.lastTarget = controls.target.clone();
+
     controls.mouseButtons = {
         RIGHT: THREE.MOUSE.ROTATE,
         LEFT: THREE.MOUSE.DOLLY,
         MIDDLE: THREE.MOUSE.DOLLY,
-    }
+    };
 
     controls.keys = {
         UP: 87,
         BOTTOM: 83,
         LEFT: 65,
         RIGHT: 68,
-    }
+    };
 
     controls.addEventListener('change', () => {
         if (!isPC) return;
-        if (camera.position.y < 1) {
+        if (camera.position.y < 1.5 && !changePerspectiveAimate) {
             camera.position.copy(camera.userData.lastPosition);
             controls.target.copy(camera.userData.lastTarget);
         } else {
@@ -84,6 +119,10 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
         outlinePass.visibleEdgeColor = new THREE.Color('0xfc8888');
         outlinePass.hiddenEdgeColor = new THREE.Color('0x190a05');
         composer.addPass(outlinePass);
+
+        effectFXAA = new ShaderPass(FXAAShader);
+        effectFXAA.uniforms['resolution'].value.set(1 / window.innerWidth, 1 / window.innerHeight);
+        composer.addPass(effectFXAA);
     }
 
     // number of modules
@@ -121,33 +160,55 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
         gltfLoader(require(`../../../assets/models/new/${path}`).default).then(gltf => {
             const scale = isPC ? .7 : .6;
             gltf.scene.scale.set(scale, scale, scale);
-            pageGroup.add(gltf.scene);
+            group = gltf.scene;
+            pageGroup.add(group);
             //动画编写
-            mixer = new THREE.AnimationMixer(gltf.scene);
+            mixer = new THREE.AnimationMixer(group);
             gltf.animations.forEach(animate => {
                 mixer.clipAction(animate).play();
             });
 
-            gltf.scene.traverse(child => {
+            group.traverse(child => {
                 switch (child.name) {
                     case 'QuDongZhuangZhi':
                         modles.qdzz = child;
                         moveModles.qdzz = child.clone();
-                        child.traverse(chil => {
-                            if(child.type === 'Mesh') {
+                        moveModles.qdzz.traverse(chil => {
+                            if (child.type === 'Mesh') {
                                 const c = (chil as THREE.Mesh);
-
+                                c.material = cloneMaterial.clone();
                             }
                         });
                         break;
                     case 'PaChi':
                         modles.pc = child;
+                        moveModles.pc = child.clone();
+                        moveModles.pc.traverse(chil => {
+                            if (child.type === 'Mesh') {
+                                const c = (chil as THREE.Mesh);
+                                c.material = cloneMaterial.clone();
+                            }
+                        });
                         break;
                     case 'JiJia':
                         modles.jj = child;
+                        moveModles.jj = child.clone();
+                        moveModles.jj.traverse(chil => {
+                            if (child.type === 'Mesh') {
+                                const c = (chil as THREE.Mesh);
+                                c.material = cloneMaterial.clone();
+                            }
+                        });
                         break;
                     case 'JianSuJi':
                         modles.jsj = child;
+                        moveModles.jsj = child.clone();
+                        moveModles.jsj.traverse(chil => {
+                            if (child.type === 'Mesh') {
+                                const c = (chil as THREE.Mesh);
+                                c.material = cloneMaterial.clone();
+                            }
+                        });
                         break;
                 }
             });
@@ -196,12 +257,13 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
 
     pubSub.subscribe('onAssembly', () => isAssembly = true);
 
+    pubSub.subscribe('reset', reset);
+
     function changeRotate(rot: 'default' | 'x' | 'y' | 'z') {
         rotation = rot;
         // do somthing...
     }
 
-    let changePerspectiveAimate: Tween<Record<string, any>> | undefined;
     function changePerspective(str: string) {
         changePerspectiveAimate?.stop();
         changePerspectiveAimate = undefined;
@@ -241,6 +303,9 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
                         camera.rotation.set(rotX, rotY, rotZ);
                         controls.target.set(targetX, targetY, targetZ);
                     },
+                    onComplete() {
+                        changePerspectiveAimate = undefined;
+                    },
                 });
                 break;
             case "俯视角":
@@ -258,7 +323,7 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
                     },
                     targetData: {
                         posX: 0,
-                        posY: 0,
+                        posY: 5,
                         posZ: 0,
                         rotX: - Math.PI / 2,
                         rotY: 0,
@@ -276,6 +341,9 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
                         camera.position.set(posX, posY, posZ);
                         camera.rotation.set(rotX, rotY, rotZ);
                         controls.target.set(targetX, targetY, targetZ);
+                    },
+                    onComplete() {
+                        changePerspectiveAimate = undefined;
                     },
                 });
                 break;
@@ -312,6 +380,9 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
                         camera.position.set(posX, posY, posZ);
                         camera.rotation.set(rotX, rotY, rotZ);
                         controls.target.set(targetX, targetY, targetZ);
+                    },
+                    onComplete() {
+                        changePerspectiveAimate = undefined;
                     },
                 });
                 break;
@@ -352,42 +423,88 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
         rotation = 'default';
         selectedObjects = [];
         outlinePass.selectedObjects = selectedObjects;
+        isAorDis = false;
+
+        console.log(title);
+
+        if (title === '拆装') {
+            isAorDis = true;
+        }
     }
 
     function startFn() {
-        isDisassebly = true;
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(group.children, true);
+
+        if (intersects.length > 0) {
+            const target = intersects[0];
+
+            if (target.object.name === 'JianSuJi' || target.object.parent?.name === 'JianSuJi') {
+                cloneModle = moveModles.jsj.clone();
+            }else if(target.object.name === 'JiJia' || target.object.parent?.name === 'JiJia'){
+                cloneModle = moveModles.jj.clone();
+            }else if(target.object.name === 'QuDongZhuangZhi' || target.object.parent?.name === 'QuDongZhuangZhi'){
+                cloneModle = moveModles.qdzz.clone();
+            }else if(target.object.name === 'PaChi' || target.object.parent?.name === 'PaChi'){
+                cloneModle = moveModles.pc.clone();
+            }
+        }
+
+        if(cloneModle) isDisassebly = true;
+
     }
-    
+
     function moveFn() {
-        if(isAssembly || isDisassebly) {
+        if (isAssembly || isDisassebly) {
             controls.enabled = false;
         }
     }
 
     function endFn() {
+        cloneModle = undefined;
+    }
+
+    function mouseDownFn(event: MouseEvent) {
+        if (!isAorDis) return;
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+
+        startFn();
+    }
+
+    function touchStartFn(event: TouchEvent) {
+        if (!isAorDis) return;
+        if (event.touches.length === 0) return;
+        mouse.x = (event.touches[0].clientX / window.innerWidth) * 2 - 1;
+        mouse.y = - (event.touches[0].clientY / window.innerHeight) * 2 + 1;
+
+        startFn();
+    }
+
+    function mouseMoveFn(event: MouseEvent) {
+    }
+
+    function touchMoveFn(event: TouchEvent) {
 
     }
 
-    function mouseDownFn() {
+    function mouseUpFn(event: MouseEvent) {
 
     }
 
-    function touchStartFn() {
+    function touchEndFn(event: TouchEvent) {
 
     }
 
-    function mouseMoveFn() {
+    function reset() {
+        group.traverse(child => {
+            child.visible = true;
+        });
     }
 
-    function touchMoveFn() {
+    function onWindowResize() {
 
-    }
-
-    function mouseUpFn() {
-
-    }
-
-    function touchEndFn() {
+        effectFXAA.uniforms['resolution'].value.set(1 / window.innerWidth, 1 / window.innerHeight);
 
     }
 

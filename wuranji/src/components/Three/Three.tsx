@@ -16,12 +16,6 @@ function Three() {
     const dispatch = useDispatch();
 
     function init() {
-        if (isPC) {
-            message.info('pc');
-        } else {
-            message.info('mobile');
-        }
-
         const initReturn = initFn('three', true);
 
         const page = Page(initReturn, setTotal, setLoaded, setCurrentPart);
