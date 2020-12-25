@@ -441,12 +441,16 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
 
             if (target.object.name === 'JianSuJi' || target.object.parent?.name === 'JianSuJi') {
                 cloneModle = moveModles.jsj.clone();
+                setCurrentPart('减速机');
             }else if(target.object.name === 'JiJia' || target.object.parent?.name === 'JiJia'){
                 cloneModle = moveModles.jj.clone();
+                setCurrentPart('机架');
             }else if(target.object.name === 'QuDongZhuangZhi' || target.object.parent?.name === 'QuDongZhuangZhi'){
                 cloneModle = moveModles.qdzz.clone();
+                setCurrentPart('驱动装置');
             }else if(target.object.name === 'PaChi' || target.object.parent?.name === 'PaChi'){
                 cloneModle = moveModles.pc.clone();
+                setCurrentPart('耙齿');
             }
         }
 

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { message } from 'antd';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 
 import { pubSub } from '../../utils/pubSub';
+import { actions } from '../../redux/ducks/system';
 
 import { State } from '../../interfaces/state';
 
@@ -20,6 +21,7 @@ let oldPos = 0;
 
 function TabListMobile() {
     const { current, part } = useSelector((state: State) => state.system);
+    const dispatch = useDispatch();
 
     const [orientation, setOrientation] = useState('');
     const [rotateCurrent, setRotate] = useState(rotate[0]);
@@ -174,6 +176,9 @@ function TabListMobile() {
             message.error('放置位置错误!');
             return;
         }
+
+        const action = actions.systemSetPart({ part: '' });
+        dispatch(action);
 
         // 只有放置正确时才会触发
         pubSub.publish('onDisassembly');
