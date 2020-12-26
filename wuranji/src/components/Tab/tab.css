@@ -432,6 +432,7 @@
     #tab-list-mobile .mobile-list .list-item {
         float       : left;
         margin-right: 5px;
+        cursor      : pointer;
     }
 
     .list-brightness {
@@ -489,6 +490,7 @@
 
     #tab-list-mobile .mobile-list .list-item {
         margin-bottom: 5px;
+        cursor       : pointer;
     }
 
     .list-brightness {

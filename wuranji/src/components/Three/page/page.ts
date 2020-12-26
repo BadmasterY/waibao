@@ -18,7 +18,7 @@ import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader';
  *                  this parameter is the number of models loaded for the current scene.
  * @param setLoaded setLoaded function, once after loading each model
  */
-function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoaded: (loaded?: number) => void, setCurrentPart: (partName: string) => void) {
+function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoaded: (loaded?: number) => void, setCurrentPart: (partName: string) => void, setErrorMsg: (ctx: string) => void) {
     const { scene, camera, renderer, composer } = initReturn;
     let mixer: THREE.AnimationMixer;
     const clock = new THREE.Clock(true);
@@ -28,6 +28,7 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
     const mouse = new THREE.Vector2();
 
     renderer.domElement.tabIndex = -1;
+    renderer.domElement.id = 'three-canvas';
 
     let changePerspectiveAimate: Tween<Record<string, any>> | undefined;
     let outlinePass: OutlinePass;
@@ -36,37 +37,76 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
     const modles: Record<string, THREE.Object3D> = {};
     const moveModles: Record<string, THREE.Object3D> = {};
     let rotation: 'default' | 'x' | 'y' | 'z' = 'default';
+    let useRotate = true;
+    let lastControlEnabled: boolean | undefined;
     let isAssembly = false;
-    let assembly = '';
     let isDisassebly = false;
     let isAorDis = false;
     let group: THREE.Group;
     let cloneModle: THREE.Object3D | undefined;
+    let selectModle: THREE.Object3D | undefined;
     let isInHoverBox = false;
+    let part: '' | 'JianSuJi' | 'QuDongZhuangZhi' | 'PaChi' | 'JiJia' = '';
+    const rotStartPos = { x: 0, y: 0 };
 
     const cloneMaterial = new THREE.MeshStandardMaterial({
         transparent: true,
-        opacity: .4,
+        opacity: .25,
         depthWrite: false,
+        depthTest: false,
         color: '0xff0000',
     });
 
     document.addEventListener('resize', onWindowResize, false);
 
-    document.addEventListener('pointerdown', mouseDownFn, false);
-    document.addEventListener('touchstart', touchStartFn, false);
+    document.addEventListener('touchstart', scaleTouchStart, false);
+    document.addEventListener('touchmove', scaleTouchMove, false);
+    document.addEventListener('touchend', scaleTouchEnd, false);
+
+    renderer.domElement.addEventListener('pointerdown', mouseDownFn, false);
+    renderer.domElement.addEventListener('touchstart', touchStartFn, false);
+
+    renderer.domElement.addEventListener('pointermove', mouseMoveFn, false);
+    renderer.domElement.addEventListener('touchmove', touchMoveFn, false);
+
+    renderer.domElement.addEventListener('pointerup', mouseUpFn, false);
+    renderer.domElement.addEventListener('touchend', touchEndFn, false);
+
+    renderer.domElement.addEventListener('touchstart', rotateTouchStart, false);
+    renderer.domElement.addEventListener('touchmove', rotateTouchMove, false);
+    renderer.domElement.addEventListener('touchend', rotateTouchEnd, false);
+
+    document.addEventListener('gesturestart', function (event) {
+        event.preventDefault();
+    });
+    document.addEventListener('dblclick', function (event) {
+        event.preventDefault();
+    })
 
     const pageGroup = new THREE.Group();
     pageGroup.name = 'Page';
+    pageGroup.userData = {
+        initScale: pageGroup.scale.x,
+    };
 
     const geometry = new THREE.BoxBufferGeometry(1, 1, 1);
-    const material = new THREE.MeshStandardMaterial({ color: 0x00ff00, transparent: true, opacity: .4 });
+    const material = new THREE.MeshStandardMaterial({
+        color: 0x00ff00,
+        transparent: true,
+        opacity: 0.25,
+        depthWrite: false,
+        visible: false,
+    });
     const cube = new THREE.Mesh(geometry, material);
-    cube.scale.set(3, 7, 3);
-    cube.position.setZ(.5);
+    // cube.visible = false;
+    if (isPC) {
+        cube.scale.set(1.8, 6.5, 2);
+        cube.position.setZ(.5);
+    } else {
+        cube.scale.set(2, 3, 3);
+        cube.position.set(0, 1, .5);
+    }
     pageGroup.add(cube);
-
-    console.log(cube);
 
     if (!isPC) {
         const bg = new THREE.TextureLoader().load(require('../../../assets/images/bg.png').default);
@@ -74,13 +114,14 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
     }
 
     const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enabled = !isPC;
+    controls.enabled = false;
     controls.enablePan = true;
     controls.enableZoom = false;
     controls.enableKeys = true;
     controls.minDistance = 5;
     controls.maxDistance = 7;
     controls.keyPanSpeed = 7;
+    controls.target.setY(1);
     if (isPC) controls.maxPolarAngle = Math.PI / (8 / 9);
 
     camera.userData.lastPosition = camera.position.clone();
@@ -143,10 +184,20 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
     const promise: (Promise<any> | THREE.Group)[] = [];
 
     if (isPC) {
+        let pLoaded = 0;
         const p2 = new Promise<null>((resolve, reject) => {
-            loader(require('../../../assets/models/ChangFang.fbx').default).then(group => {
+            loader(
+                require('../../../assets/models/ChangFang.fbx').default,
+                (url, loaded, total) => {
+
+                    const newProgress = loaded / total;
+                    const load = newProgress - pLoaded;
+                    setLoaded(load < 0 ? 0 : load);
+                    if (load > 0) pLoaded = newProgress;
+                }
+            ).then(group => {
                 // 成功加载之后调用
-                setLoaded();
+                // setLoaded();
                 group.scale.set(0.01, 0.01, 0.01);
                 pageGroup.add(group);
                 resolve(null);
@@ -155,12 +206,24 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
         promise.push(p2);
     }
 
+    let p3Loaded = 0;
     const path = isPC ? 'ChuWuJi_DH(1).glb' : 'ChuWuJi_YDD_DH.glb';
     const p3 = new Promise<null>((resolve, reject) => {
-        gltfLoader(require(`../../../assets/models/new/${path}`).default).then(gltf => {
-            const scale = isPC ? .7 : .6;
-            gltf.scene.scale.set(scale, scale, scale);
+        gltfLoader(
+            require(`../../../assets/models/new/${path}`).default,
+            (url, loaded, total) => {
+
+
+                const newProgress = loaded / total;
+                const load = newProgress - p3Loaded;
+                setLoaded(load < 0 ? 0 : load);
+                if (load > 0) p3Loaded = newProgress;
+            }
+        ).then(gltf => {
+            const scale = isPC ? .55 : .6;
             group = gltf.scene;
+            if (isPC) group.position.setY(.8);
+            group.scale.set(scale, scale, scale);
             pageGroup.add(group);
             //动画编写
             mixer = new THREE.AnimationMixer(group);
@@ -172,43 +235,59 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
                 switch (child.name) {
                     case 'QuDongZhuangZhi':
                         modles.qdzz = child;
+                        modles.qdzz.userData = { lastVisible: child.visible };
                         moveModles.qdzz = child.clone();
+                        moveModles.qdzz.scale.set(.0033, .0033, .0033);
                         moveModles.qdzz.traverse(chil => {
-                            if (child.type === 'Mesh') {
+                            if (chil.type === 'Mesh') {
                                 const c = (chil as THREE.Mesh);
                                 c.material = cloneMaterial.clone();
                             }
                         });
+                        moveModles.qdzz.visible = false;
+                        pageGroup.add(moveModles.qdzz);
                         break;
                     case 'PaChi':
                         modles.pc = child;
+                        modles.pc.userData = { lastVisible: child.visible };
                         moveModles.pc = child.clone();
+                        moveModles.pc.scale.set(.0033, .0033, .0033);
                         moveModles.pc.traverse(chil => {
-                            if (child.type === 'Mesh') {
+                            if (chil.type === 'Mesh') {
                                 const c = (chil as THREE.Mesh);
                                 c.material = cloneMaterial.clone();
                             }
                         });
+                        moveModles.pc.visible = false;
+                        pageGroup.add(moveModles.pc);
                         break;
                     case 'JiJia':
                         modles.jj = child;
+                        modles.jj.userData = { lastVisible: child.visible };
                         moveModles.jj = child.clone();
+                        moveModles.jj.scale.set(.0033, .0033, .0033);
                         moveModles.jj.traverse(chil => {
-                            if (child.type === 'Mesh') {
+                            if (chil.type === 'Mesh') {
                                 const c = (chil as THREE.Mesh);
                                 c.material = cloneMaterial.clone();
                             }
                         });
+                        moveModles.jj.visible = false;
+                        pageGroup.add(moveModles.jj);
                         break;
                     case 'JianSuJi':
                         modles.jsj = child;
+                        modles.jsj.userData = { lastVisible: child.visible };
                         moveModles.jsj = child.clone();
+                        moveModles.jsj.scale.set(.0033, .0033, .0033);
                         moveModles.jsj.traverse(chil => {
-                            if (child.type === 'Mesh') {
+                            if (chil.type === 'Mesh') {
                                 const c = (chil as THREE.Mesh);
                                 c.material = cloneMaterial.clone();
                             }
                         });
+                        moveModles.jsj.visible = false;
+                        pageGroup.add(moveModles.jsj);
                         break;
                 }
             });
@@ -254,14 +333,42 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
     pubSub.subscribe('changeLight', changeLight);
 
     pubSub.subscribe('changeTitle', changeTitle);
+    pubSub.subscribe('endLight', endLight);
 
-    pubSub.subscribe('onAssembly', () => isAssembly = true);
+    pubSub.subscribe('touchMove', touchMoveFn);
+    pubSub.subscribe('touchEnd', touchEndFn);
+
+    pubSub.subscribe('onAssembly', (pName: string) => {
+        isAssembly = true;
+        switch (pName) {
+            case '耙齿':
+                cloneModle = moveModles.pc;
+                part = 'PaChi';
+                break;
+            case '驱动装置':
+                cloneModle = moveModles.qdzz;
+                part = 'QuDongZhuangZhi';
+                break;
+            case '机架':
+                cloneModle = moveModles.jj;
+                part = 'JiJia';
+                break;
+            case '减速机':
+                cloneModle = moveModles.jsj;
+                part = 'JianSuJi';
+                break;
+            default:
+                console.warn('unknow part name:', pName);
+                break;
+        }
+    });
+
+    pubSub.subscribe('onDisassembly', onDisassembly);
 
     pubSub.subscribe('reset', reset);
 
     function changeRotate(rot: 'default' | 'x' | 'y' | 'z') {
         rotation = rot;
-        // do somthing...
     }
 
     function changePerspective(str: string) {
@@ -290,7 +397,7 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
                         rotY: 0,
                         rotZ: 0,
                         targetX: 0,
-                        targetY: 0,
+                        targetY: 1,
                         targetZ: 0,
                     },
                     time: 300,
@@ -413,10 +520,15 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
     }
 
     function changeLight(oldLight: number, newLight: number) {
+        if (!isPC) useRotate = false;
         const { initIntensity } = spotLight.userData;
 
         const changeLight = (newLight - 50) / 100;
         spotLight.intensity = initIntensity + (3 * changeLight);
+    }
+
+    function endLight() {
+        if (!isPC) useRotate = true;
     }
 
     function changeTitle(title: string) {
@@ -424,12 +536,78 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
         selectedObjects = [];
         outlinePass.selectedObjects = selectedObjects;
         isAorDis = false;
+        useRotate = true;
 
-        console.log(title);
-
-        if (title === '拆装') {
-            isAorDis = true;
+        switch (title) {
+            case '拆装':
+                isAorDis = true;
         }
+    }
+
+    function onDisassembly(isOK: boolean) {
+        if (isPC) {
+            if (lastControlEnabled !== undefined)
+                controls.enabled = lastControlEnabled;
+            lastControlEnabled = undefined;
+        } else {
+            useRotate = true;
+        }
+
+        if (cloneModle) {
+            cloneModle.visible = false;
+            cloneModle = undefined;
+        }
+
+
+        if (isOK) {
+            switch (part) {
+                case 'QuDongZhuangZhi':
+                    modles.qdzz.visible = false;
+                    modles.qdzz.userData.lastVisible = false;
+                    break;
+                case 'PaChi':
+                    modles.pc.visible = false;
+                    modles.pc.userData.lastVisible = false;
+                    break;
+                case 'JianSuJi':
+                    modles.jsj.visible = false;
+                    modles.jsj.userData.lastVisible = false;
+                    break;
+                case 'JiJia':
+                    modles.jj.visible = false;
+                    modles.jj.userData.lastVisible = false;
+                    break;
+                default:
+                    break;
+            }
+        } else {
+            switch (part) {
+                case 'QuDongZhuangZhi':
+                    modles.qdzz.visible = modles.qdzz.userData.lastVisible;
+                    break;
+                case 'PaChi':
+                    modles.pc.visible = modles.pc.userData.lastVisible;
+                    break;
+                case 'JianSuJi':
+                    modles.jsj.visible = modles.jsj.userData.lastVisible;
+                    break;
+                case 'JiJia':
+                    modles.jj.visible = modles.jj.userData.lastVisible;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        mouse.x = 0;
+        mouse.y = 0;
+
+        isDisassebly = false;
+        isAssembly = false;
+
+        part = '';
+
+        setCurrentPart('');
     }
 
     function startFn() {
@@ -439,37 +617,159 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
         if (intersects.length > 0) {
             const target = intersects[0];
 
+            if (!target.object.visible) return;
+            if (target.object.parent && !target.object.parent.visible) return;
+
             if (target.object.name === 'JianSuJi' || target.object.parent?.name === 'JianSuJi') {
-                cloneModle = moveModles.jsj.clone();
+                cloneModle = moveModles.jsj;
+                part = 'JianSuJi';
                 setCurrentPart('减速机');
-            }else if(target.object.name === 'JiJia' || target.object.parent?.name === 'JiJia'){
-                cloneModle = moveModles.jj.clone();
+            } else if (target.object.name === 'JiJia' || target.object.parent?.name === 'JiJia') {
+                cloneModle = moveModles.jj;
+                part = 'JiJia';
                 setCurrentPart('机架');
-            }else if(target.object.name === 'QuDongZhuangZhi' || target.object.parent?.name === 'QuDongZhuangZhi'){
-                cloneModle = moveModles.qdzz.clone();
+            } else if (target.object.name === 'QuDongZhuangZhi' || target.object.parent?.name === 'QuDongZhuangZhi') {
+                cloneModle = moveModles.qdzz;
+                part = 'QuDongZhuangZhi';
                 setCurrentPart('驱动装置');
-            }else if(target.object.name === 'PaChi' || target.object.parent?.name === 'PaChi'){
-                cloneModle = moveModles.pc.clone();
+            } else if (target.object.name === 'PaChi' || target.object.parent?.name === 'PaChi') {
+                cloneModle = moveModles.pc;
+                part = 'PaChi';
                 setCurrentPart('耙齿');
             }
         }
 
-        if(cloneModle) isDisassebly = true;
+        if (cloneModle) isDisassebly = true;
 
     }
 
     function moveFn() {
-        if (isAssembly || isDisassebly) {
+        if (!isAssembly && !isDisassebly) return;
+        if (!cloneModle) return;
+
+        if (isPC) {
+            if (lastControlEnabled === undefined)
+                lastControlEnabled = controls.enabled;
             controls.enabled = false;
+        } else {
+            useRotate = false;
         }
+
+        isInHoverBox = false;
+
+        raycaster.setFromCamera(mouse, camera);
+        const cubeHover = raycaster.intersectObject(cube, true);
+
+        if (cubeHover.length > 0) isInHoverBox = true;
+
+        switch (part) {
+            case 'QuDongZhuangZhi':
+                selectModle = modles.qdzz;
+                break;
+            case 'PaChi':
+                selectModle = modles.pc;
+                break;
+            case 'JianSuJi':
+                selectModle = modles.jsj;
+                break;
+            case 'JiJia':
+                selectModle = modles.jj;
+                break;
+            default:
+                break;
+        }
+
+        // if (isInHoverBox) {
+        //     cloneModle.visible = false;
+        //     if (selectModle) {
+        //         if (isAssembly) selectModle.visible = true;
+        //         if (isDisassebly) selectModle.visible = selectModle.userData.lastVisible;
+        //     }
+        // } else {
+        cloneModle.visible = true;
+        if (selectModle) {
+            if (isAssembly) selectModle.visible = selectModle.userData.lastVisible;
+            if (isDisassebly) selectModle.visible = false;
+        }
+
+        const mv = new THREE.Vector3(
+            mouse.x,
+            mouse.y,
+            .5
+        );
+        mv.unproject(camera);
+
+        cloneModle.position.copy(mv);
+        // }
     }
 
     function endFn() {
-        cloneModle = undefined;
+        if (cloneModle) {
+            cloneModle.visible = false;
+            cloneModle = undefined;
+        }
+
+        if (isInHoverBox) {
+            if (isAssembly) {
+                switch (part) {
+                    case 'QuDongZhuangZhi':
+                        if (modles.qdzz.visible) setErrorMsg('请拆卸后重试!');
+                        modles.qdzz.visible = true;
+                        break;
+                    case 'PaChi':
+                        if (modles.pc.visible) setErrorMsg('请拆卸后重试!');
+                        modles.pc.visible = true;
+                        break;
+                    case 'JianSuJi':
+                        if (modles.jsj.visible) setErrorMsg('请拆卸后重试!');
+                        modles.jsj.visible = true;
+                        break;
+                    case 'JiJia':
+                        if (modles.jj.visible) setErrorMsg('请拆卸后重试!');
+                        modles.jj.visible = true;
+                        break;
+                    default:
+                        break;
+                }
+
+            }
+            if (isDisassebly) {
+                if (selectModle) {
+                    selectModle.visible = true;
+                    selectModle.userData.lastVisible = true;
+                    selectModle = undefined;
+                }
+            }
+        } else {
+            if (selectModle) {
+                selectModle.visible = selectModle.userData.lastVisible;
+                selectModle = undefined;
+            }
+        }
+
+        mouse.x = 0;
+        mouse.y = 0;
+
+        if (!isPC) {
+            useRotate = true;
+        } else {
+            if (lastControlEnabled !== undefined)
+                controls.enabled = lastControlEnabled;
+            lastControlEnabled = undefined;
+        }
+
+        isDisassebly = false;
+        isAssembly = false;
+
+        setTimeout(() => {
+            part = '';
+            setCurrentPart('');
+        }, 500);
     }
 
     function mouseDownFn(event: MouseEvent) {
         if (!isAorDis) return;
+        if (event.button !== 0) return;
         mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
         mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
 
@@ -486,18 +786,165 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
     }
 
     function mouseMoveFn(event: MouseEvent) {
+        if (!isAorDis) return;
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+
+        moveFn();
     }
 
+    let p = '';
     function touchMoveFn(event: TouchEvent) {
+        if (!isAorDis) return;
+        if (event.touches.length === 0) return;
+        mouse.x = (event.touches[0].clientX / window.innerWidth) * 2 - 1;
+        mouse.y = - (event.touches[0].clientY / window.innerHeight) * 2 + 1;
 
+        p = '';
+        const el = document.elementFromPoint(event.touches[0].clientX, event.touches[0].clientY);
+        if (el && (el.className === 'list-item structure' || el.parentElement?.className === 'list-item structure')) {
+            if (el.className === 'list-item structure') {
+                p = el.children[1].innerHTML;
+            } else {
+                if (el.parentElement)
+                    p = el.parentElement.children[1].innerHTML;
+            }
+        }
+
+        moveFn();
     }
 
     function mouseUpFn(event: MouseEvent) {
-
+        if (!isAorDis) return;
+        if (event.button !== 0) return;
+        endFn();
     }
 
     function touchEndFn(event: TouchEvent) {
+        if (!isAorDis) return;
 
+        if (p !== '') {
+            pubSub.publish('touchEndFn', p);
+        }
+        endFn();
+    }
+
+    function rotateTouchStart(event: TouchEvent) {
+        if (!useRotate) return;
+        if (event.touches.length === 0) return;
+
+        rotStartPos.x = event.touches[0].clientX;
+        rotStartPos.y = event.touches[0].clientY;
+
+        const { x, y, z } = group.rotation;
+
+        group.userData = {
+            rotX: x,
+            rotY: y,
+            rotZ: z,
+        };
+    }
+
+    function rotateTouchMove(event: TouchEvent) {
+        if (!useRotate) return;
+        if (event.touches.length === 0) return;
+
+        const { clientX, clientY } = event.touches[0];
+
+        const x = clientX - rotStartPos.x;
+        const y = clientY - rotStartPos.y;
+
+        switch (rotation) {
+            case 'default':
+                rotDefault(x, y);
+                break;
+            case 'x':
+                rotX(y);
+                break;
+            case 'y':
+                rotY(x);
+                break;
+            case 'z':
+                rotZ(x, y);
+                break;
+            default:
+                console.warn('unknow rotation:', rotation);
+                break;
+        }
+    }
+
+    function rotateTouchEnd(event: TouchEvent) {
+        if (!useRotate) return;
+
+        rotStartPos.x = 0;
+        rotStartPos.y = 0;
+
+        const { x, y, z } = group.rotation;
+
+        group.userData.rotX = x;
+        group.userData.rotY = y;
+        group.userData.rotZ = z;
+    }
+
+    function rotDefault(posX: number, posY: number) {
+        const { rotX, rotY, rotZ } = group.userData;
+        const { innerWidth, innerHeight } = window;
+
+        const ratioX = posX / innerWidth;
+        const ratioY = posY / innerHeight;
+
+        group.rotation.set(
+            rotX + ratioY * Math.PI,
+            rotY + ratioX * Math.PI,
+            rotZ,
+        );
+    }
+
+    function rotX(posY: number) {
+        const { rotX, rotY, rotZ } = group.userData;
+        const { innerHeight } = window;
+
+        const ratioY = posY / innerHeight;
+
+        group.rotation.set(
+            rotX + ratioY * Math.PI,
+            rotY,
+            rotZ,
+        );
+    }
+
+    function rotY(posX: number) {
+        const { rotX, rotY, rotZ } = group.userData;
+        const { innerWidth } = window;
+
+        const ratioX = posX / innerWidth;
+
+        group.rotation.set(
+            rotX,
+            rotY + ratioX * Math.PI,
+            rotZ,
+        );
+    }
+
+    function rotZ(posX: number, posY: number) {
+        const { rotX, rotY, rotZ } = group.userData;
+        const { innerWidth, innerHeight } = window;
+
+        const ratioX = posX / innerWidth;
+        const ratioY = posY / innerHeight;
+
+        let ratio: number;
+        if (Math.abs(ratioX) > Math.abs(ratioY)) {
+            ratio = ratioX;
+        } else {
+            ratio = ratioY;
+        }
+
+        group.rotation.set(
+            rotX,
+            rotY,
+            rotZ + ratio * Math.PI,
+        );
     }
 
     function reset() {
@@ -506,10 +953,61 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
         });
     }
 
+    let startDistance = 0;
+    let startScale = 0;
+    function scaleTouchStart(ev: TouchEvent) {
+        if (ev.touches.length < 2) return;
+
+        useRotate = false;
+
+        const x0 = ev.touches[0].clientX;
+        const y0 = ev.touches[0].clientY;
+
+        const x1 = ev.touches[1].clientX;
+        const y1 = ev.touches[1].clientY;
+
+        const x = x1 - x0;
+        const y = y1 - y0;
+
+        startDistance = x * x + y * y;
+
+        startScale = pageGroup.scale.x;
+    }
+
+    const size = 1280 * 720;
+    function scaleTouchMove(ev: TouchEvent) {
+        if (ev.touches.length < 2) return;
+
+        useRotate = false;
+
+        const x0 = ev.touches[0].clientX;
+        const y0 = ev.touches[0].clientY;
+
+        const x1 = ev.touches[1].clientX;
+        const y1 = ev.touches[1].clientY;
+
+        const x = x1 - x0;
+        const y = y1 - y0;
+
+        const distance = x * x + y * y;
+        const moved = distance - startDistance;
+
+        let scale = startScale + moved / size;
+
+        if (scale > 1.25) scale = 1.25;
+        if (scale < .75) scale = .75;
+
+        pageGroup.scale.set(scale, scale, scale);
+    }
+
+    function scaleTouchEnd(ev: TouchEvent) {
+        useRotate = true;
+        startScale = 0;
+        startDistance = 0;
+    }
+
     function onWindowResize() {
-
         effectFXAA.uniforms['resolution'].value.set(1 / window.innerWidth, 1 / window.innerHeight);
-
     }
 
     return {

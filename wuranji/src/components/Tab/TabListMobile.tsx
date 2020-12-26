@@ -6,6 +6,7 @@ import { pubSub } from '../../utils/pubSub';
 import { actions } from '../../redux/ducks/system';
 
 import { State } from '../../interfaces/state';
+import isPC from '../../utils/isPC';
 
 const list = ['旋转', '结构', '亮度', '拆装'];
 const rotate = ['default', 'x', 'y', 'z'];
@@ -27,18 +28,24 @@ function TabListMobile() {
     const [rotateCurrent, setRotate] = useState(rotate[0]);
     const [structureCurrent, setStructure] = useState('');
     const [light, setLight] = useState(50);
-    
-    
+
+
     useEffect(() => {
         setStructure('');
     }, [current]);
-    
+
     useEffect(() => {
         VorH();
         window.addEventListener('orientationchange', VorH, false);
 
         return () => window.removeEventListener('orientationchange', VorH, false);
     }, []);
+
+    useEffect(() => {
+        pubSub.subscribe('touchEndFn', onTouchEnd);
+
+        return () => { pubSub.unSubscribe('touchEndFn', onTouchEnd); };
+    });
 
     function VorH() {
         isTouchStart = false;
@@ -148,6 +155,8 @@ function TabListMobile() {
         isTouchStart = false;
         startPos = 0;
         oldPos = 0;
+
+        pubSub.publish('endLight');
     }
 
     function renderBrightness() {
@@ -166,22 +175,44 @@ function TabListMobile() {
         );
     }
 
-    function onTouchStart(current: string) {
+    function onTouchStart(e: React.TouchEvent, current: string) {
         pubSub.publish('onAssembly', current);
+    }
+
+    let timer: NodeJS.Timeout | undefined;
+    function onTouchMove(e: React.TouchEvent) {
+        if (timer) clearTimeout(timer);
+        if (e.touches.length > 0) {
+            const el = document.elementFromPoint(e.touches[0].clientX, e.touches[0].clientY);
+
+            if (el && el.id === 'three-canvas') {
+                pubSub.publish('touchMove', e);
+
+                timer = setTimeout(() => { pubSub.publish('touchEnd', e); }, 90);
+            }
+        }
+    }
+
+    function touchEnd(e: React.TouchEvent) {
+        if (e.touches.length > 0) {
+            const el = document.elementFromPoint(e.touches[0].clientX, e.touches[0].clientY);
+
+            console.log('end');
+            if (el && el.id === 'three-canvas') {
+                pubSub.publish('touchEnd', e);
+            }
+        }
     }
 
     function onTouchEnd(current: string) {
         if (part === '') return;
         if (part !== current) {
             message.error('放置位置错误!');
+            pubSub.publish('onDisassembly', false);
             return;
         }
 
-        const action = actions.systemSetPart({ part: '' });
-        dispatch(action);
-
-        // 只有放置正确时才会触发
-        pubSub.publish('onDisassembly');
+        pubSub.publish('onDisassembly', true);
     }
 
     function renderDisassembly() {
@@ -192,8 +223,9 @@ function TabListMobile() {
                         <li
                             key={index}
                             className="list-item structure"
-                            onTouchStart={() => onTouchStart(value)}
-                            onTouchEnd={() => onTouchEnd(value)}
+                            onTouchStart={(e) => onTouchStart(e, value)}
+                            onTouchMove={onTouchMove}
+                            onTouchEndCapture={touchEnd}
                         >
                             <div className={`list-bg list-bg-${index}`}></div>
                             <p>{value}</p>

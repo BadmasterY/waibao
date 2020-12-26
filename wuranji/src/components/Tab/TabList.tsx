@@ -19,11 +19,11 @@ function TabList() {
         if (part === '') return;
         if (part !== list[index]) {
             message.error('放置位置错误!');
+            pubSub.publish('onDisassembly', false);
             return;
         }
 
-        // 只有放置正确时才会触发
-        pubSub.publish('onDisassembly');
+        pubSub.publish('onDisassembly', true);
     }
 
     // 重置
@@ -39,8 +39,8 @@ function TabList() {
                         <li
                             key={index}
                             className="list-item"
-                            onMouseDown={() => mouseDownFn(index)}
-                            onMouseUp={() => mouseUpFn(index)}
+                            onPointerDown={() => mouseDownFn(index)}
+                            onPointerUp={() => mouseUpFn(index)}
                         >
                             <div className={`item-img item-img-${index}`}></div>
                             <p>{value}</p>

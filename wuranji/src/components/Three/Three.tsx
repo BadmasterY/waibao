@@ -18,12 +18,12 @@ function Three() {
     function init() {
         const initReturn = initFn('three', true);
 
-        const page = Page(initReturn, setTotal, setLoaded, setCurrentPart);
+        const page = Page(initReturn, setTotal, setLoaded, setCurrentPart, setErrorMsg);
 
         const { promise, callback } = page;
 
         Promise.all(promise).then(() => {
-            loaded();
+            setTimeout(() => loaded(), 1000);
             setAnimation(true);
         }).catch(err => {
             console.error(err);
@@ -43,6 +43,10 @@ function Three() {
     function setCurrentPart(part: string) {
         const action = actions.systemSetPart({ part });
         dispatch(action);
+    }
+
+    function setErrorMsg(ctx: string) {
+        message.error(ctx);
     }
 
     function loaded() {
