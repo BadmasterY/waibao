@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import { message } from 'antd';
 import { useDispatch } from 'react-redux';
 
-import isPC from '../../utils/isPC';
 import initFn from './modules/init';
 import animate, { setAnimation } from './modules/animate';
 

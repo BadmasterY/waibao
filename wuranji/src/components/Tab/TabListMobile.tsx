@@ -181,16 +181,16 @@ function TabListMobile() {
 
     let timer: NodeJS.Timeout | undefined;
     function onTouchMove(e: React.TouchEvent) {
-        if (timer) clearTimeout(timer);
-        if (e.touches.length > 0) {
-            const el = document.elementFromPoint(e.touches[0].clientX, e.touches[0].clientY);
+        // if (timer) clearTimeout(timer);
+        // if (e.touches.length > 0) {
+        //     const el = document.elementFromPoint(e.touches[0].clientX, e.touches[0].clientY);
 
-            if (el && el.id === 'three-canvas') {
+        //     if (el && el.id === 'three-canvas') {
                 pubSub.publish('touchMove', e);
 
-                timer = setTimeout(() => { pubSub.publish('touchEnd', e); }, 90);
-            }
-        }
+                // timer = setTimeout(() => { pubSub.publish('touchEnd', e); }, 120);
+            // }
+        // }
     }
 
     function touchEnd(e: React.TouchEvent) {
@@ -225,7 +225,8 @@ function TabListMobile() {
                             className="list-item structure"
                             onTouchStart={(e) => onTouchStart(e, value)}
                             onTouchMove={onTouchMove}
-                            onTouchEndCapture={touchEnd}
+                            // onTouchEndCapture={touchEnd}
+                            onTouchEnd={(e) => onTouchEnd(value)}
                         >
                             <div className={`list-bg list-bg-${index}`}></div>
                             <p>{value}</p>

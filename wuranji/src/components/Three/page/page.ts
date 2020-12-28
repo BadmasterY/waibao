@@ -4,6 +4,7 @@ import { pubSub } from '../../../utils/pubSub';
 // import loader from '../modules/loader';
 import loader, { gltfLoader } from '../modules/loader';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls';
 import isPC from '../../../utils/isPC';
 import createAnimate from '../modules/createAnimate';
 import { Tween } from '@tweenjs/tween.js';
@@ -30,6 +31,8 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
     renderer.domElement.tabIndex = -1;
     renderer.domElement.id = 'three-canvas';
 
+    const mobileDom = document.getElementById('tab-mobile');
+
     let changePerspectiveAimate: Tween<Record<string, any>> | undefined;
     let outlinePass: OutlinePass;
     let effectFXAA: ShaderPass;
@@ -48,6 +51,16 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
     let isInHoverBox = false;
     let part: '' | 'JianSuJi' | 'QuDongZhuangZhi' | 'PaChi' | 'JiJia' = '';
     const rotStartPos = { x: 0, y: 0 };
+    let moveForward = false;
+    let moveBackward = false;
+    let moveLeft = false;
+    let moveRight = false;
+    let moveTop = false;
+    let moveDown = false;
+    let useControls = false;
+
+    const direction = new THREE.Vector3();
+    const velocity = new THREE.Vector3();
 
     const cloneMaterial = new THREE.MeshStandardMaterial({
         transparent: true,
@@ -63,18 +76,28 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
     document.addEventListener('touchmove', scaleTouchMove, false);
     document.addEventListener('touchend', scaleTouchEnd, false);
 
+    document.addEventListener('contextmenu', (event) => { event.preventDefault(); });
+
     renderer.domElement.addEventListener('pointerdown', mouseDownFn, false);
-    renderer.domElement.addEventListener('touchstart', touchStartFn, false);
+    renderer.domElement.addEventListener('pointerdown', controlsDown, false);
 
     renderer.domElement.addEventListener('pointermove', mouseMoveFn, false);
-    renderer.domElement.addEventListener('touchmove', touchMoveFn, false);
 
     renderer.domElement.addEventListener('pointerup', mouseUpFn, false);
-    renderer.domElement.addEventListener('touchend', touchEndFn, false);
+    renderer.domElement.addEventListener('pointerup', controlsUp, false);
 
-    renderer.domElement.addEventListener('touchstart', rotateTouchStart, false);
-    renderer.domElement.addEventListener('touchmove', rotateTouchMove, false);
-    renderer.domElement.addEventListener('touchend', rotateTouchEnd, false);
+    renderer.domElement.addEventListener('keydown', onKeyDown, false);
+    renderer.domElement.addEventListener('keyup', onKeyUp, false);
+
+    if (!isPC && mobileDom) {
+        mobileDom.addEventListener('touchstart', touchStartFn, false);
+        mobileDom.addEventListener('touchmove', touchMoveFn, false);
+        mobileDom.addEventListener('touchend', touchEndFn, false);
+
+        mobileDom.addEventListener('touchstart', rotateTouchStart, false);
+        mobileDom.addEventListener('touchmove', rotateTouchMove, false);
+        mobileDom.addEventListener('touchend', rotateTouchEnd, false);
+    }
 
     document.addEventListener('gesturestart', function (event) {
         event.preventDefault();
@@ -87,6 +110,10 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
     pageGroup.name = 'Page';
     pageGroup.userData = {
         initScale: pageGroup.scale.x,
+    };
+
+    camera.userData = {
+        lastPosition: camera.position.clone(),
     };
 
     const geometry = new THREE.BoxBufferGeometry(1, 1, 1);
@@ -113,43 +140,8 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
         scene.background = bg;
     }
 
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enabled = false;
-    controls.enablePan = true;
-    controls.enableZoom = false;
-    controls.enableKeys = true;
-    controls.minDistance = 5;
-    controls.maxDistance = 7;
-    controls.keyPanSpeed = 7;
-    controls.target.setY(1);
-    if (isPC) controls.maxPolarAngle = Math.PI / (8 / 9);
-
-    camera.userData.lastPosition = camera.position.clone();
-    camera.userData.lastTarget = controls.target.clone();
-
-    controls.mouseButtons = {
-        RIGHT: THREE.MOUSE.ROTATE,
-        LEFT: THREE.MOUSE.DOLLY,
-        MIDDLE: THREE.MOUSE.DOLLY,
-    };
-
-    controls.keys = {
-        UP: 87,
-        BOTTOM: 83,
-        LEFT: 65,
-        RIGHT: 68,
-    };
-
-    controls.addEventListener('change', () => {
-        if (!isPC) return;
-        if (camera.position.y < 1.5 && !changePerspectiveAimate) {
-            camera.position.copy(camera.userData.lastPosition);
-            controls.target.copy(camera.userData.lastTarget);
-        } else {
-            camera.userData.lastPosition = camera.position.clone();
-            camera.userData.lastTarget = controls.target.clone();
-        }
-    });
+    const controls = new PointerLockControls(camera, renderer.domElement);
+    controls.isLocked = false;
 
     if (composer) {
         outlinePass = new OutlinePass(new THREE.Vector2(window.innerWidth, window.innerHeight), scene, camera);
@@ -177,7 +169,108 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
     // animate callback
     function callback() {
         mixer.update(clock.getDelta());
-        controls.update();
+        updateControls();
+    }
+
+    function updateControls() {
+        if (!useControls) return;
+        if (!moveForward && !moveBackward && !moveTop && !moveDown && !moveLeft && !moveRight) return;
+
+        velocity.x = 0;
+        velocity.y = 0;
+        velocity.z = 0;
+
+        direction.z = Number(moveForward) - Number(moveBackward);
+        direction.y = Number(moveDown) - Number(moveTop);
+        direction.x = Number(moveRight) - Number(moveLeft);
+        direction.normalize(); // 转化为单位向量
+
+        if (moveForward || moveBackward) velocity.z -= direction.z * .1;
+        if (moveTop || moveDown) velocity.y -= direction.y * .1;
+        if (moveLeft || moveRight) velocity.x -= direction.x * .1;
+
+        let right = -velocity.x * .5;
+        let forward = -velocity.z * .5;
+
+        controls.moveRight(right);
+        controls.moveForward(forward);
+
+        let y = camera.position.y + velocity.y * .5;
+
+        if (y < 1.5) y = 1.5;
+        if (y > 5) y = 5;
+
+        camera.position.setY(y);
+
+        const x = camera.position.x - group.position.x;
+        const z = camera.position.z - group.position.z;
+
+        const dis = x * x + y * y + z * z;
+
+        if (dis <= 16) {
+            camera.position.copy(camera.userData.lastPosition);
+        }
+
+        camera.userData.lastPosition = camera.position.clone();
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+        switch (event.key) {
+            case 'w': // w
+                moveForward = true;
+                break;
+            case 'a': // a
+                moveLeft = true;
+                break;
+            case 's': // s
+                moveBackward = true;
+                break;
+            case 'd': // d
+                moveRight = true;
+                break;
+            case 'q': // q
+                moveTop = true;
+                break;
+            case 'e': // e
+                moveDown = true;
+                break;
+        }
+    }
+
+    function onKeyUp(event: KeyboardEvent) {
+        switch (event.key) {
+            case 'w': // w
+                moveForward = false;
+                break;
+            case 'a': // a
+                moveLeft = false;
+                break;
+            case 's': // s
+                moveBackward = false;
+                break;
+            case 'd': // d
+                moveRight = false;
+                break;
+            case 'q': // q
+                moveTop = false;
+                break;
+            case 'e': // e
+                moveDown = false;
+                break;
+        }
+    }
+
+    function controlsDown(event: MouseEvent) {
+        if (!useControls) return;
+        if (event.button !== 2) return;
+
+        controls.lock();
+    }
+
+    function controlsUp(event: MouseEvent) {
+        if (!useControls) return;
+
+        controls.unlock();
     }
 
     // promise array
@@ -222,7 +315,7 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
         ).then(gltf => {
             const scale = isPC ? .55 : .6;
             group = gltf.scene;
-            if (isPC) group.position.setY(.8);
+            if (isPC) group.position.setY(.5);
             group.scale.set(scale, scale, scale);
             pageGroup.add(group);
             //动画编写
@@ -248,6 +341,10 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
                         pageGroup.add(moveModles.qdzz);
                         break;
                     case 'PaChi':
+                        child.traverse(c => {
+                            if (c.type === 'Mesh')
+                                ((c as THREE.Mesh).material as any).emissive = new THREE.Color(isPC ? 0x4a4a4a : 0x717171);
+                        });
                         modles.pc = child;
                         modles.pc.userData = { lastVisible: child.visible };
                         moveModles.pc = child.clone();
@@ -327,8 +424,14 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
 
     pubSub.subscribe('changeStructure', changeStructure);
 
-    pubSub.subscribe('enterRoaming', () => controls.enabled = true);
-    pubSub.subscribe('leaveRoaming', () => controls.enabled = false);
+    pubSub.subscribe('enterRoaming', () => {
+        // controls.enabled = true;
+        useControls = true;
+    });
+    pubSub.subscribe('leaveRoaming', () => {
+        // controls.enabled = false;
+        useControls = false;
+    });
 
     pubSub.subscribe('changeLight', changeLight);
 
@@ -385,9 +488,6 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
                         rotX: camera.rotation.x,
                         rotY: camera.rotation.y,
                         rotZ: camera.rotation.z,
-                        targetX: controls.target.x,
-                        targetY: controls.target.y,
-                        targetZ: controls.target.z,
                     },
                     targetData: {
                         posX: 0,
@@ -396,19 +496,14 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
                         rotX: 0,
                         rotY: 0,
                         rotZ: 0,
-                        targetX: 0,
-                        targetY: 1,
-                        targetZ: 0,
                     },
                     time: 300,
                     onUpdate({
                         posX, posY, posZ,
                         rotX, rotY, rotZ,
-                        targetX, targetY, targetZ,
                     }) {
                         camera.position.set(posX, posY, posZ);
                         camera.rotation.set(rotX, rotY, rotZ);
-                        controls.target.set(targetX, targetY, targetZ);
                     },
                     onComplete() {
                         changePerspectiveAimate = undefined;
@@ -424,9 +519,6 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
                         rotX: camera.rotation.x,
                         rotY: camera.rotation.y,
                         rotZ: camera.rotation.z,
-                        targetX: controls.target.x,
-                        targetY: controls.target.y,
-                        targetZ: controls.target.z,
                     },
                     targetData: {
                         posX: 0,
@@ -435,19 +527,14 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
                         rotX: - Math.PI / 2,
                         rotY: 0,
                         rotZ: 0,
-                        targetX: 0,
-                        targetY: 0,
-                        targetZ: 0,
                     },
                     time: 300,
                     onUpdate({
                         posX, posY, posZ,
                         rotX, rotY, rotZ,
-                        targetX, targetY, targetZ,
                     }) {
                         camera.position.set(posX, posY, posZ);
                         camera.rotation.set(rotX, rotY, rotZ);
-                        controls.target.set(targetX, targetY, targetZ);
                     },
                     onComplete() {
                         changePerspectiveAimate = undefined;
@@ -463,9 +550,6 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
                         rotX: camera.rotation.x,
                         rotY: camera.rotation.y,
                         rotZ: camera.rotation.z,
-                        targetX: controls.target.x,
-                        targetY: controls.target.y,
-                        targetZ: controls.target.z,
                     },
                     targetData: {
                         posX: -5,
@@ -474,19 +558,14 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
                         rotX: 0,
                         rotY: -Math.PI / 2,
                         rotZ: 0,
-                        targetX: 0,
-                        targetY: 0,
-                        targetZ: 0,
                     },
                     time: 300,
                     onUpdate({
                         posX, posY, posZ,
                         rotX, rotY, rotZ,
-                        targetX, targetY, targetZ,
                     }) {
                         camera.position.set(posX, posY, posZ);
                         camera.rotation.set(rotX, rotY, rotZ);
-                        controls.target.set(targetX, targetY, targetZ);
                     },
                     onComplete() {
                         changePerspectiveAimate = undefined;
@@ -546,8 +625,9 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
 
     function onDisassembly(isOK: boolean) {
         if (isPC) {
-            if (lastControlEnabled !== undefined)
-                controls.enabled = lastControlEnabled;
+            if (lastControlEnabled !== undefined) {
+                useControls = lastControlEnabled;
+            }
             lastControlEnabled = undefined;
         } else {
             useRotate = true;
@@ -648,9 +728,10 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
         if (!cloneModle) return;
 
         if (isPC) {
-            if (lastControlEnabled === undefined)
-                lastControlEnabled = controls.enabled;
-            controls.enabled = false;
+            if (lastControlEnabled === undefined) {
+                lastControlEnabled = useControls;
+            }
+            useControls = false;
         } else {
             useRotate = false;
         }
@@ -679,13 +760,6 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
                 break;
         }
 
-        // if (isInHoverBox) {
-        //     cloneModle.visible = false;
-        //     if (selectModle) {
-        //         if (isAssembly) selectModle.visible = true;
-        //         if (isDisassebly) selectModle.visible = selectModle.userData.lastVisible;
-        //     }
-        // } else {
         cloneModle.visible = true;
         if (selectModle) {
             if (isAssembly) selectModle.visible = selectModle.userData.lastVisible;
@@ -715,18 +789,22 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
                     case 'QuDongZhuangZhi':
                         if (modles.qdzz.visible) setErrorMsg('请拆卸后重试!');
                         modles.qdzz.visible = true;
+                        modles.qdzz.userData.lastVisible = true;
                         break;
                     case 'PaChi':
                         if (modles.pc.visible) setErrorMsg('请拆卸后重试!');
                         modles.pc.visible = true;
+                        modles.pc.userData.lastVisible = true;
                         break;
                     case 'JianSuJi':
                         if (modles.jsj.visible) setErrorMsg('请拆卸后重试!');
                         modles.jsj.visible = true;
+                        modles.jsj.userData.lastVisible = true;
                         break;
                     case 'JiJia':
                         if (modles.jj.visible) setErrorMsg('请拆卸后重试!');
                         modles.jj.visible = true;
+                        modles.jj.userData.lastVisible = true;
                         break;
                     default:
                         break;
@@ -753,8 +831,9 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
         if (!isPC) {
             useRotate = true;
         } else {
-            if (lastControlEnabled !== undefined)
-                controls.enabled = lastControlEnabled;
+            if (lastControlEnabled !== undefined) {
+                // controls.enabled = lastControlEnabled;
+            }
             lastControlEnabled = undefined;
         }
 

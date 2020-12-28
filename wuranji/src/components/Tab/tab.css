@@ -388,7 +388,7 @@
         bottom        : 0;
         left          : 0;
         transform     : none;
-        pointer-events: none;
+        /* pointer-events: none; */
     }
 
     #tab-control-mobile {
@@ -462,7 +462,7 @@
         bottom        : 0;
         left          : 0;
         transform     : none;
-        pointer-events: none;
+        /* pointer-events: none; */
     }
 
     #tab-control-mobile {
