@@ -29,7 +29,7 @@ export default function reducer(state = initialState, action: Action) {
     const { payload } = action;
     switch (action.type) {
         case types.LOADING:
-            return Object.assign({}, state, { isLoading: false });
+            return Object.assign({}, state, { isLoading: false, loaded: state.total });
         case types.START:
             const startState = Object.assign({}, state);
             if (payload?.isStart !== undefined)

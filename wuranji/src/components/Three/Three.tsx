@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { message } from 'antd';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 
 import initFn from './modules/init';
 import animate, { setAnimation } from './modules/animate';
@@ -9,13 +9,30 @@ import Page from './page/page';
 
 import { actions } from '../../redux/ducks/system';
 
+import { State } from '../../interfaces/state';
+
 import './three.css';
+
+let timer: NodeJS.Timeout | undefined;
 
 function Three() {
     const dispatch = useDispatch();
+    const { isLoading } = useSelector((state: State) => state.system);
+
+    if(!isLoading && timer) {
+        clearTimeout(timer);
+    }
 
     function init() {
         const initReturn = initFn('three', true);
+
+        function load() {
+            setLoaded(.05);
+
+            timer = setTimeout(load, 600);
+        }
+
+        load();
 
         const page = Page(initReturn, setTotal, setLoaded, setCurrentPart, setErrorMsg);
 
@@ -26,7 +43,7 @@ function Three() {
             setAnimation(true);
         }).catch(err => {
             console.error(err);
-            message.error('加载失败!', 0);
+            // message.error('加载失败!', 0);
         });
 
         animate(initReturn, () => {

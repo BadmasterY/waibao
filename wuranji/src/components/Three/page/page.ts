@@ -1,9 +1,7 @@
 import * as THREE from 'three';
 import { InitReturn } from '../../../interfaces/init';
 import { pubSub } from '../../../utils/pubSub';
-// import loader from '../modules/loader';
 import loader, { gltfLoader } from '../modules/loader';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls';
 import isPC from '../../../utils/isPC';
 import createAnimate from '../modules/createAnimate';
@@ -11,6 +9,18 @@ import { Tween } from '@tweenjs/tween.js';
 import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass';
 import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader';
+
+const textureLoader = new THREE.TextureLoader();
+const new_img = textureLoader.load(require('../../../assets/images/modelsImg/ChuWuJi01_Basecolor.jpg').default);
+new_img.wrapS = THREE.RepeatWrapping;
+new_img.wrapT = THREE.RepeatWrapping;
+
+const partMap = {
+    'QuDongZhuangZhi': '驱动装置',
+    'JianSuJi': '减速机',
+    'PaChi': '耙齿',
+    'JiJia': '机架',
+};
 
 /**
  * this is a page page
@@ -48,6 +58,7 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
     let group: THREE.Group;
     let cloneModle: THREE.Object3D | undefined;
     let selectModle: THREE.Object3D | undefined;
+    let shitou: THREE.Object3D | undefined;
     let isInHoverBox = false;
     let part: '' | 'JianSuJi' | 'QuDongZhuangZhi' | 'PaChi' | 'JiJia' = '';
     const rotStartPos = { x: 0, y: 0 };
@@ -58,6 +69,15 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
     let moveTop = false;
     let moveDown = false;
     let useControls = false;
+    let p = '';
+    let timer: NodeJS.Timeout | undefined;
+    const groupAABBBox = new THREE.Box3();
+    const cameraAABBBox = new THREE.Box3();
+    const boxGeometry = new THREE.BoxGeometry(2, 2, 2);
+    const boxMatrail = new THREE.MeshStandardMaterial({ visible: false });
+    const box = new THREE.Mesh(boxGeometry, boxMatrail);
+    box.position.copy(camera.position);
+    cameraAABBBox.setFromObject(box);
 
     const direction = new THREE.Vector3();
     const velocity = new THREE.Vector3();
@@ -201,13 +221,12 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
         if (y > 5) y = 5;
 
         camera.position.setY(y);
+        box.position.copy(camera.position);
 
-        const x = camera.position.x - group.position.x;
-        const z = camera.position.z - group.position.z;
+        groupAABBBox.setFromObject(group);
+        cameraAABBBox.setFromObject(box);
 
-        const dis = x * x + y * y + z * z;
-
-        if (dis <= 16) {
+        if (groupAABBBox.intersectsBox(cameraAABBBox)) {
             camera.position.copy(camera.userData.lastPosition);
         }
 
@@ -282,11 +301,10 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
             loader(
                 require('../../../assets/models/ChangFang.fbx').default,
                 (url, loaded, total) => {
-
-                    const newProgress = loaded / total;
-                    const load = newProgress - pLoaded;
-                    setLoaded(load < 0 ? 0 : load);
-                    if (load > 0) pLoaded = newProgress;
+                    // const newProgress = loaded / total;
+                    // const load = newProgress - pLoaded;
+                    // setLoaded(load < 0 ? 0 : load);
+                    // if (load > 0) pLoaded = newProgress;
                 }
             ).then(group => {
                 // 成功加载之后调用
@@ -300,23 +318,26 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
     }
 
     let p3Loaded = 0;
-    const path = isPC ? 'ChuWuJi_DH(1).glb' : 'ChuWuJi_YDD_DH.glb';
+    const path = isPC ? 'ChuWuJi_DH.glb' : 'ChuWuJi_YDD_DH.glb';
     const p3 = new Promise<null>((resolve, reject) => {
         gltfLoader(
             require(`../../../assets/models/new/${path}`).default,
             (url, loaded, total) => {
-
-
-                const newProgress = loaded / total;
-                const load = newProgress - p3Loaded;
-                setLoaded(load < 0 ? 0 : load);
-                if (load > 0) p3Loaded = newProgress;
+                // const newProgress = loaded / total;
+                // const load = newProgress - p3Loaded;
+                // setLoaded(load < 0 ? 0 : load);
+                // if (load > 0) p3Loaded = newProgress;
             }
         ).then(gltf => {
             const scale = isPC ? .55 : .6;
             group = gltf.scene;
             if (isPC) group.position.setY(.5);
             group.scale.set(scale, scale, scale);
+            group.userData = {
+                pos: group.position.clone(),
+                rot: group.rotation.clone(),
+                sca: group.scale.clone(),
+            };
             pageGroup.add(group);
             //动画编写
             mixer = new THREE.AnimationMixer(group);
@@ -326,6 +347,12 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
 
             group.traverse(child => {
                 switch (child.name) {
+                    case 'ShiTou_DH':
+                        if (!isPC) shitou = child;
+                        break;
+                    case 'ShiTou':
+                        if (isPC) shitou = child;
+                        break;
                     case 'QuDongZhuangZhi':
                         modles.qdzz = child;
                         modles.qdzz.userData = { lastVisible: child.visible };
@@ -339,6 +366,17 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
                         });
                         moveModles.qdzz.visible = false;
                         pageGroup.add(moveModles.qdzz);
+                        break;
+                    case 'JiJia4':
+                        (child as any).material.metalness = .3;
+                        break;
+                    case 'JiJia3':
+                        (child as any).material.matelness = .7;
+                        (child as any).material.color = new THREE.Color(0xededed);
+                        break;
+                    case 'waike1':
+                        console.log(child);
+                        (child as any).material.roughness = .8;
                         break;
                     case 'PaChi':
                         child.traverse(c => {
@@ -398,7 +436,7 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
     HJG.intensity = .75;
     pageGroup.add(HJG);
 
-    const spotLight = new THREE.SpotLight(0xffffff, 1.5);
+    const spotLight = new THREE.SpotLight(0xffffff, isPC ? 1 : 1.5);
     spotLight.position.set(0, 100, 50);
     spotLight.userData.initIntensity = spotLight.intensity;
 
@@ -410,6 +448,27 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
     spotLight.shadow.camera.near = 500;
     spotLight.shadow.camera.far = 4000;
     spotLight.shadow.camera.fov = 30;
+
+    if (isPC) {
+        spotLight.position.set(0, 50, 25);
+        const spotLight_copy_1 = spotLight.clone();
+        spotLight_copy_1.intensity = .2;
+        spotLight_copy_1.position.set(-30, 0, 0);
+
+        pageGroup.add(spotLight_copy_1);
+
+        const spotLight_copy_2 = spotLight.clone();
+        spotLight_copy_2.intensity = .2;
+        spotLight_copy_2.position.set(30, 0, 0);
+
+        pageGroup.add(spotLight_copy_2);
+
+        const spotLight_copy_3 = spotLight.clone();
+        spotLight_copy_3.intensity = .2;
+        spotLight_copy_3.position.set(0, 0, -30);
+
+        pageGroup.add(spotLight_copy_3);
+    }
 
     pageGroup.add(spotLight);
 
@@ -425,11 +484,9 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
     pubSub.subscribe('changeStructure', changeStructure);
 
     pubSub.subscribe('enterRoaming', () => {
-        // controls.enabled = true;
         useControls = true;
     });
     pubSub.subscribe('leaveRoaming', () => {
-        // controls.enabled = false;
         useControls = false;
     });
 
@@ -617,9 +674,18 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
         isAorDis = false;
         useRotate = true;
 
+        if (title !== '亮度') resetPos();
+
         switch (title) {
             case '拆装':
                 isAorDis = true;
+                if (shitou) shitou.visible = false;
+                reset();
+                break;
+            default:
+                showAll();
+                if (shitou) shitou.visible = true;
+                break;
         }
     }
 
@@ -766,22 +832,32 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
             if (isDisassebly) selectModle.visible = false;
         }
 
+        let offset = 0;
+
+        if (part === 'QuDongZhuangZhi') {
+            offset = isPC ? -.4 : -.2;
+        } else if (part === 'JianSuJi') {
+            offset = isPC ? -.5 : -.3;
+        } else if (part === 'PaChi') {
+            offset = isPC ? -.2 : 0;
+        }
+
         const mv = new THREE.Vector3(
             mouse.x,
-            mouse.y,
+            mouse.y + offset,
             .5
         );
         mv.unproject(camera);
 
         cloneModle.position.copy(mv);
-        // }
     }
 
     function endFn() {
-        if (cloneModle) {
-            cloneModle.visible = false;
-            cloneModle = undefined;
-        }
+        if (!cloneModle) return;
+        if (!cloneModle.visible) return;
+
+        cloneModle.visible = false;
+        cloneModle = undefined;
 
         if (isInHoverBox) {
             if (isAssembly) {
@@ -810,6 +886,8 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
                         break;
                 }
 
+                if (part !== '')
+                    pubSub.publish('onAssemblyThree', partMap[part]);
             }
             if (isDisassebly) {
                 if (selectModle) {
@@ -817,6 +895,9 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
                     selectModle.userData.lastVisible = true;
                     selectModle = undefined;
                 }
+
+                if (p !== '')
+                    pubSub.publish('touchEndFn', p);
             }
         } else {
             if (selectModle) {
@@ -832,18 +913,13 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
             useRotate = true;
         } else {
             if (lastControlEnabled !== undefined) {
-                // controls.enabled = lastControlEnabled;
+                useControls = lastControlEnabled;
             }
             lastControlEnabled = undefined;
         }
 
         isDisassebly = false;
         isAssembly = false;
-
-        setTimeout(() => {
-            part = '';
-            setCurrentPart('');
-        }, 500);
     }
 
     function mouseDownFn(event: MouseEvent) {
@@ -872,7 +948,6 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
         moveFn();
     }
 
-    let p = '';
     function touchMoveFn(event: TouchEvent) {
         if (!isAorDis) return;
         if (event.touches.length === 0) return;
@@ -881,16 +956,19 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
 
         p = '';
         const el = document.elementFromPoint(event.touches[0].clientX, event.touches[0].clientY);
-        if (el && (el.className === 'list-item structure' || el.parentElement?.className === 'list-item structure')) {
-            if (el.className === 'list-item structure') {
-                p = el.children[1].innerHTML;
-            } else {
-                if (el.parentElement)
-                    p = el.parentElement.children[1].innerHTML;
-            }
+        if (el && findClassName(el.className, 'use-with-event')) {
+            if (part !== '')
+                p = partMap[part];
         }
 
         moveFn();
+    }
+
+    function findClassName(className: string, current: string) {
+        const classArray = className.split(' ');
+        const index = classArray.findIndex(value => value === current);
+
+        return index !== -1;
     }
 
     function mouseUpFn(event: MouseEvent) {
@@ -909,6 +987,10 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
     }
 
     function rotateTouchStart(event: TouchEvent) {
+        if (timer) {
+            clearTimeout(timer);
+            useRotate = true;
+        }
         if (!useRotate) return;
         if (event.touches.length === 0) return;
 
@@ -917,11 +999,11 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
 
         const { x, y, z } = group.rotation;
 
-        group.userData = {
+        group.userData = Object.assign({}, group.userData, {
             rotX: x,
             rotY: y,
             rotZ: z,
-        };
+        });
     }
 
     function rotateTouchMove(event: TouchEvent) {
@@ -1027,9 +1109,23 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
     }
 
     function reset() {
-        group.traverse(child => {
-            child.visible = true;
-        });
+        for (const key in modles) {
+            modles[key].visible = false;
+            modles[key].userData.lastVisible = false;
+        }
+    }
+
+    function showAll() {
+        for (const key in modles) {
+            modles[key].visible = true;
+            modles[key].userData.lastVisible = true;
+        }
+    }
+
+    function resetPos() {
+        group.position.copy(group.userData.pos);
+        group.rotation.copy(group.userData.rot);
+        group.scale.copy(group.userData.sca);
     }
 
     let startDistance = 0;
@@ -1080,9 +1176,14 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
     }
 
     function scaleTouchEnd(ev: TouchEvent) {
-        useRotate = true;
         startScale = 0;
         startDistance = 0;
+
+        if (timer) {
+            clearTimeout(timer);
+        }
+
+        timer = setTimeout(() => useRotate = true, 500);
     }
 
     function onWindowResize() {

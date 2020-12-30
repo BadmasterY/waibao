@@ -20,6 +20,13 @@ let isTouchStart = false;
 let startPos = 0;
 let oldPos = 0;
 
+const listMap: Record<string, string> = {
+    '减速机': 'jsj',
+    '耙齿': 'pc',
+    '机架': 'jj',
+    '驱动装置': 'qdzz',
+};
+
 function TabListMobile() {
     const { current, part } = useSelector((state: State) => state.system);
     const dispatch = useDispatch();
@@ -28,6 +35,23 @@ function TabListMobile() {
     const [rotateCurrent, setRotate] = useState(rotate[0]);
     const [structureCurrent, setStructure] = useState('');
     const [light, setLight] = useState(50);
+    const [showList, setShow] = useState(([] as string[]).concat(structure));
+
+    function onAssemblyThree(part: string) {
+        const newList: string[] = [];
+
+        for (const value of showList) {
+            if (value !== part) newList.push(value);
+        }
+
+        setShow(newList);
+    }
+
+    useEffect(() => {
+        pubSub.subscribe('onAssemblyThree', onAssemblyThree);
+
+        return () => { pubSub.unSubscribe('onAssemblyThree', onAssemblyThree); };
+    });
 
 
     useEffect(() => {
@@ -115,7 +139,7 @@ function TabListMobile() {
                             }
                             onClick={() => changeStructure(value)}
                         >
-                            <div className={`list-bg list-bg-${index}`}></div>
+                            <div className={`list-bg list-bg-${listMap[value]}`}></div>
                             <p>{value}</p>
                         </li>
                     ))
@@ -186,10 +210,10 @@ function TabListMobile() {
         //     const el = document.elementFromPoint(e.touches[0].clientX, e.touches[0].clientY);
 
         //     if (el && el.id === 'three-canvas') {
-                pubSub.publish('touchMove', e);
+        pubSub.publish('touchMove', e);
 
-                // timer = setTimeout(() => { pubSub.publish('touchEnd', e); }, 120);
-            // }
+        // timer = setTimeout(() => { pubSub.publish('touchEnd', e); }, 120);
+        // }
         // }
     }
 
@@ -204,12 +228,18 @@ function TabListMobile() {
         }
     }
 
-    function onTouchEnd(current: string) {
-        if (part === '') return;
-        if (part !== current) {
-            message.error('放置位置错误!');
+    function onTouchEnd(part: string) {
+        if (part === '') {
             pubSub.publish('onDisassembly', false);
             return;
+        }
+
+        const index = showList.findIndex(value => value === part);
+
+        if (index === -1) {
+            const newList = ([] as string[]).concat(showList, part);
+
+            setShow(newList);
         }
 
         pubSub.publish('onDisassembly', true);
@@ -217,32 +247,51 @@ function TabListMobile() {
 
     function renderDisassembly() {
         return (
-            <ul className="mobile-list">
-                {
-                    structure.map((value, index) => (
-                        <li
-                            key={index}
-                            className="list-item structure"
-                            onTouchStart={(e) => onTouchStart(e, value)}
-                            onTouchMove={onTouchMove}
+            <>
+                <div className="drag-box">可将拆卸后的零件拖拽到下方区域</div>
+                <ul
+                    className="mobile-list use-with-event"
+                // onTouchEnd={(e) => onTouchEnd()}
+                >
+                    {
+                        showList.map((value, index) => (
+                            <li
+                                key={index}
+                                className="list-item structure use-with-event"
+                                onTouchStart={(e) => onTouchStart(e, value)}
+                                onTouchMove={onTouchMove}
                             // onTouchEndCapture={touchEnd}
-                            onTouchEnd={(e) => onTouchEnd(value)}
-                        >
-                            <div className={`list-bg list-bg-${index}`}></div>
-                            <p>{value}</p>
-                        </li>
-                    ))
-                }
-            </ul>
+                            >
+                                <div className={`list-bg list-bg-${listMap[value]} use-with-event`}></div>
+                                <p className='use-with-event'>{value}</p>
+                            </li>
+                        ))
+                    }
+                </ul>
+            </>
         );
     }
 
+    // 重置
+    function reset() {
+        pubSub.publish('reset');
+        setShow(([] as string[]).concat(structure));
+    }
+
     return (
-        <div id="tab-list-mobile">
+        <>
+            <div id="tab-list-mobile">
+                {
+                    renderList()
+                }
+            </div>
             {
-                renderList()
+                current === '拆装' ?
+                    <div className="list-reset" onClick={reset}></div>
+                    :
+                    ''
             }
-        </div>
+        </>
     );
 }
 

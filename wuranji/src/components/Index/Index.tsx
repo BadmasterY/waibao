@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { notification } from 'antd';
 import { useSelector, useDispatch } from 'react-redux';
 
 import Loading from '../Loading/Loading';
@@ -22,6 +23,12 @@ function Index() {
     useEffect(() => {
         const action = actions.systemSetCurrent({ current: isPC ? "视角" : "旋转" });
         dispatch(action);
+
+        // notification.warning({
+        //     message: '测试版本提示信息',
+        //     description: '当前为测试版本, 仅供内部使用!',
+        //     duration: 0,
+        // });
     }, []);
 
     return (

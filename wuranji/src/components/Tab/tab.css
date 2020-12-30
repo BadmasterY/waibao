@@ -127,7 +127,7 @@
     top             : 50%;
     right           : 20px;
     width           : 100px;
-    height          : auto;
+    height          : 410px;
     transform       : translateY(-50%);
     background-color: #3c5592;
     border-radius   : 5px;
@@ -139,6 +139,7 @@
     margin     : 0;
     padding    : 0;
     padding-top: 10px;
+    height     : 100%;
 }
 
 #tab-list .list-item {
@@ -169,22 +170,22 @@
     color     : #fff;
 }
 
-.item-img-0 {
+.item-img-jsj {
     background-image: url('../../assets/images/tab/jsj.png');
     background-size : 85%;
 }
 
-.item-img-1 {
+.item-img-pc {
     background-image: url('../../assets/images/tab/pc.png');
     background-size : 45%;
 }
 
-.item-img-2 {
+.item-img-jj {
     background-image: url('../../assets/images/tab/jj.png');
     background-size : 75%;
 }
 
-.item-img-3 {
+.item-img-qdzz {
     background-image: url('../../assets/images/tab/qdzz.png');
     background-size : 70%;
 }
@@ -335,19 +336,19 @@
     background-size    : contain;
 }
 
-#tab-list-mobile .list-bg-0 {
+#tab-list-mobile .list-bg-jsj {
     background-image: url('../../assets/images/tabMobile/jsj.png');
 }
 
-#tab-list-mobile .list-bg-1 {
+#tab-list-mobile .list-bg-pc {
     background-image: url('../../assets/images/tabMobile/pc.png');
 }
 
-#tab-list-mobile .list-bg-2 {
+#tab-list-mobile .list-bg-qdzz {
     background-image: url('../../assets/images/tabMobile/qdzz.png');
 }
 
-#tab-list-mobile .list-bg-3 {
+#tab-list-mobile .list-bg-jj {
     background-image: url('../../assets/images/tabMobile/jc.png');
 }
 
@@ -379,15 +380,45 @@
     /* background-image: url('../../assets/images/tabMobile/light_btn_current.png'); */
 }
 
+#tab-mobile .list-reset {
+    position           : absolute;
+    width              : 35px;
+    height             : 35px;
+    top                : 15px;
+    right              : 15px;
+    background-image   : url('../../assets/images/tab/reset.png');
+    background-position: center;
+    background-repeat  : no-repeat;
+    background-size    : contain;
+    transition         : all .3s;
+    cursor             : pointer;
+}
+
+.drag-box {
+    background-image   : url('../../assets/images/tab/drag_bg.png');
+    background-position: center;
+    background-repeat  : no-repeat;
+    background-size    : contain;
+    width              : 300px;
+    height             : 45px;
+    color              : #fff;
+    text-align         : center;
+    line-height        : 45px;
+    position           : absolute;
+    top                : -50px;
+    left               : 50%;
+    transform          : translateX(-50%);
+}
+
 /* 竖屏 */
 @media screen and (orientation:portrait) {
     #tab-mobile {
-        width         : 100%;
-        height        : 100%;
-        position      : absolute;
-        bottom        : 0;
-        left          : 0;
-        transform     : none;
+        width            : 100%;
+        height           : 100%;
+        position         : absolute;
+        bottom           : 0;
+        left             : 0;
+        transform        : none;
         /* pointer-events: none; */
     }
 
@@ -424,6 +455,7 @@
 
     #tab-list-mobile .mobile-list {
         width    : 320px;
+        height   : 75px;
         top      : 0;
         left     : 50%;
         transform: translateX(-50%);
@@ -455,13 +487,17 @@
 
 /* 横屏 */
 @media screen and (orientation:landscape) {
+    .drag-box {
+        display: none;
+    }
+
     #tab-mobile {
-        width         : 100%;
-        height        : 100%;
-        position      : absolute;
-        bottom        : 0;
-        left          : 0;
-        transform     : none;
+        width            : 100%;
+        height           : 100%;
+        position         : absolute;
+        bottom           : 0;
+        left             : 0;
+        transform        : none;
         /* pointer-events: none; */
     }
 

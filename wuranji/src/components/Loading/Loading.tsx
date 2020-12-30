@@ -18,7 +18,7 @@ function Loading(props: Props) {
                         <div className="box-bg box-progress"></div>
                         <div className="box-bg box-mask" style={{
                             top: total > 0 ?
-                                `-${(Math.floor((loaded / total) * 100))}%` : '0%'
+                                `-${(Math.floor(((loaded / total) > 1 ? .99 : (loaded / total)) * 100))}%` : '0%'
                         }}></div>
                     </div>
                     <div className="box-bg box-bg-1"></div>
@@ -26,7 +26,7 @@ function Loading(props: Props) {
                 </div>
                 <p className="loading-text">全速加载中... {
                     total > 0 ?
-                        (Math.floor((loaded / total) * 100)) : 0
+                        (Math.floor(((loaded / total) > 1 ? .99 : (loaded / total)) * 100)) : 0
                 } %</p>
             </div>
         </div>
