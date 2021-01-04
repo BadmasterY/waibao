@@ -83,9 +83,9 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
             // group.rotateOnWorldAxis(new Vector3(0,1,0), Math.PI/4);
 
             //动画编写
-            console.log(group.animations.length);
+            // console.log(group.animations.length);
             const mixer = new THREE.AnimationMixer(group);
-            mixer.clipAction(group.animations[0]).play();
+            // mixer.clipAction(group.animations[0]).play();
 
             pageGroup.add(group);
             resolve(null);

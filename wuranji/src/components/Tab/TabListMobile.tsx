@@ -9,7 +9,7 @@ import { State } from '../../interfaces/state';
 import isPC from '../../utils/isPC';
 
 const list = ['旋转', '结构', '亮度', '拆装'];
-const rotate = ['default', 'x', 'y', 'z'];
+const rotate = ['default', 'x', 'y', '重置视角'];
 const structure = ['减速机', '耙齿', '驱动装置', '机架'];
 const orient = ['横屏', '竖屏'];
 
@@ -112,7 +112,13 @@ function TabListMobile() {
                             className={
                                 `list-item rotate-${index} ${rotateCurrent === value ? `rotate-current-${index}` : ''}`
                             }
-                            onClick={() => changeRotate(value)}
+                            onClick={() => {
+                                if (value === '重置视角') {
+                                    pubSub.publish('resetAll');
+                                } else {
+                                    changeRotate(value);
+                                }
+                            }}
                         >
                         </li>
                     ))

@@ -15,12 +15,18 @@ const new_img = textureLoader.load(require('../../../assets/images/modelsImg/Chu
 new_img.wrapS = THREE.RepeatWrapping;
 new_img.wrapT = THREE.RepeatWrapping;
 
+const matMap = textureLoader.load(require('../../../assets/images/test.jpg').default);
+matMap.wrapS = THREE.RepeatWrapping;
+matMap.wrapT = THREE.RepeatWrapping;
+
 const partMap = {
     'QuDongZhuangZhi': '驱动装置',
     'JianSuJi': '减速机',
     'PaChi': '耙齿',
     'JiJia': '机架',
 };
+
+const SHITOU = isPC ? 'ShiTou_DH' : 'ShiTou';
 
 /**
  * this is a page page
@@ -87,7 +93,7 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
         opacity: .25,
         depthWrite: false,
         depthTest: false,
-        color: '0xff0000',
+        // color: '0xff0000',
     });
 
     document.addEventListener('resize', onWindowResize, false);
@@ -174,7 +180,7 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
         composer.addPass(outlinePass);
 
         effectFXAA = new ShaderPass(FXAAShader);
-        effectFXAA.uniforms['resolution'].value.set(1 / window.innerWidth, 1 / window.innerHeight);
+        (effectFXAA.uniforms as any)['resolution'].value.set(1 / window.innerWidth, 1 / window.innerHeight);
         composer.addPass(effectFXAA);
     }
 
@@ -318,7 +324,7 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
     }
 
     let p3Loaded = 0;
-    const path = isPC ? 'ChuWuJi_DH.glb' : 'ChuWuJi_YDD_DH.glb';
+    const path = isPC ? 'ChuWuJi_DH.glb' : 'ChuWuJi_YDD.glb';
     const p3 = new Promise<null>((resolve, reject) => {
         gltfLoader(
             require(`../../../assets/models/new/${path}`).default,
@@ -346,6 +352,9 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
             });
 
             group.traverse(child => {
+                if (!isPC && child.type === 'Mesh') {
+                    (child as any).material.metalness = 0.3;
+                }
                 switch (child.name) {
                     case 'ShiTou_DH':
                         if (!isPC) shitou = child;
@@ -374,14 +383,18 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
                         (child as any).material.matelness = .7;
                         (child as any).material.color = new THREE.Color(0xededed);
                         break;
+                    case 'JiJia1':
+                        if (!isPC) (child as any).material.roughness = 1;
+                        break;
                     case 'waike1':
-                        console.log(child);
                         (child as any).material.roughness = .8;
                         break;
                     case 'PaChi':
                         child.traverse(c => {
-                            if (c.type === 'Mesh')
-                                ((c as THREE.Mesh).material as any).emissive = new THREE.Color(isPC ? 0x4a4a4a : 0x717171);
+                            if (c.type === 'Mesh'){
+                                ((c as THREE.Mesh).material as any).emissive = new THREE.Color(isPC ? 0x4a4a4a : 0x414141);
+                                ((c as THREE.Mesh).material as any).roughness = 1;
+                            }
                         });
                         modles.pc = child;
                         modles.pc.userData = { lastVisible: child.visible };
@@ -449,25 +462,28 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
     spotLight.shadow.camera.far = 4000;
     spotLight.shadow.camera.fov = 30;
 
-    if (isPC) {
-        spotLight.position.set(0, 50, 25);
-        const spotLight_copy_1 = spotLight.clone();
-        spotLight_copy_1.intensity = .2;
-        spotLight_copy_1.position.set(-30, 0, 0);
+    // if (isPC) {
+    spotLight.position.set(0, 50, 25);
+    const spotLight_copy_1 = spotLight.clone();
+    spotLight_copy_1.intensity = .2;
+    spotLight_copy_1.position.set(-30, 0, 0);
 
-        pageGroup.add(spotLight_copy_1);
+    pageGroup.add(spotLight_copy_1);
 
-        const spotLight_copy_2 = spotLight.clone();
-        spotLight_copy_2.intensity = .2;
-        spotLight_copy_2.position.set(30, 0, 0);
+    const spotLight_copy_2 = spotLight.clone();
+    spotLight_copy_2.intensity = .2;
+    spotLight_copy_2.position.set(30, 0, 0);
 
-        pageGroup.add(spotLight_copy_2);
+    pageGroup.add(spotLight_copy_2);
 
-        const spotLight_copy_3 = spotLight.clone();
-        spotLight_copy_3.intensity = .2;
-        spotLight_copy_3.position.set(0, 0, -30);
+    const spotLight_copy_3 = spotLight.clone();
+    spotLight_copy_3.intensity = .2;
+    spotLight_copy_3.position.set(0, 0, -30);
 
-        pageGroup.add(spotLight_copy_3);
+    pageGroup.add(spotLight_copy_3);
+    // }
+    if (!isPC) {
+        spotLight.position.set(0, 0, 30);
     }
 
     pageGroup.add(spotLight);
@@ -526,6 +542,8 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
     pubSub.subscribe('onDisassembly', onDisassembly);
 
     pubSub.subscribe('reset', reset);
+
+    pubSub.subscribe('resetAll', resetPos);
 
     function changeRotate(rot: 'default' | 'x' | 'y' | 'z') {
         rotation = rot;
@@ -761,24 +779,28 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
         const intersects = raycaster.intersectObjects(group.children, true);
 
         if (intersects.length > 0) {
-            const target = intersects[0];
+            let target = intersects[0];
+
+            if (target.object.name === SHITOU || target.object.parent?.name === SHITOU || target.object.parent?.parent?.name === SHITOU) {
+                target = intersects[1];
+            }
 
             if (!target.object.visible) return;
             if (target.object.parent && !target.object.parent.visible) return;
 
-            if (target.object.name === 'JianSuJi' || target.object.parent?.name === 'JianSuJi') {
+            if (target.object.name === 'JianSuJi' || target.object.parent?.name === 'JianSuJi' || target.object.parent?.parent?.name === 'JianSuJi') {
                 cloneModle = moveModles.jsj;
                 part = 'JianSuJi';
                 setCurrentPart('减速机');
-            } else if (target.object.name === 'JiJia' || target.object.parent?.name === 'JiJia') {
+            } else if (target.object.name === 'JiJia' || target.object.parent?.name === 'JiJia' || target.object.parent?.parent?.name === 'JiJia') {
                 cloneModle = moveModles.jj;
                 part = 'JiJia';
                 setCurrentPart('机架');
-            } else if (target.object.name === 'QuDongZhuangZhi' || target.object.parent?.name === 'QuDongZhuangZhi') {
+            } else if (target.object.name === 'QuDongZhuangZhi' || target.object.parent?.name === 'QuDongZhuangZhi' || target.object.parent?.parent?.name === 'QuDongZhuangZhi') {
                 cloneModle = moveModles.qdzz;
                 part = 'QuDongZhuangZhi';
                 setCurrentPart('驱动装置');
-            } else if (target.object.name === 'PaChi' || target.object.parent?.name === 'PaChi') {
+            } else if (target.object.name === 'PaChi' || target.object.parent?.name === 'PaChi' || target.object.parent?.parent?.name === 'PaChi') {
                 cloneModle = moveModles.pc;
                 part = 'PaChi';
                 setCurrentPart('耙齿');
@@ -1187,7 +1209,7 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
     }
 
     function onWindowResize() {
-        effectFXAA.uniforms['resolution'].value.set(1 / window.innerWidth, 1 / window.innerHeight);
+        (effectFXAA.uniforms as any)['resolution'].value.set(1 / window.innerWidth, 1 / window.innerHeight);
     }
 
     return {

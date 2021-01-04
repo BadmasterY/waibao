@@ -14,6 +14,7 @@ import { State } from '../../interfaces/state';
 import './three.css';
 
 let timer: NodeJS.Timeout | undefined;
+let totalNum = .5;
 
 function Three() {
     const dispatch = useDispatch();
@@ -27,12 +28,14 @@ function Three() {
         const initReturn = initFn('three', true);
 
         function load() {
-            setLoaded(.05);
+            setLoaded(totalNum);
 
-            timer = setTimeout(load, 600);
+            totalNum -= .1;
+
+            timer = setTimeout(load, 10000);
         }
 
-        load();
+        timer = setTimeout(() => load(), 1200);
 
         const page = Page(initReturn, setTotal, setLoaded, setCurrentPart, setErrorMsg);
 
