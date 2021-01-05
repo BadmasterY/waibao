@@ -188,8 +188,8 @@ function Page(initReturn: InitReturn, setTotal: (number: number) => void, setLoa
     // 通过 isPC 判断模型数量
     // pc: 2
     // mobile: 1
-    const total = isPC ? 2 : 1;
-    setTotal(total);
+    // const total = isPC ? 2 : 1;
+    // setTotal(total);
     scene.add(pageGroup); // add to scene
 
     // animate callback

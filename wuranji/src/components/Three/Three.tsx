@@ -6,6 +6,7 @@ import initFn from './modules/init';
 import animate, { setAnimation } from './modules/animate';
 
 import Page from './page/page';
+import isPC from '../../utils/isPC';
 
 import { actions } from '../../redux/ducks/system';
 
@@ -20,7 +21,7 @@ function Three() {
     const dispatch = useDispatch();
     const { isLoading } = useSelector((state: State) => state.system);
 
-    if(!isLoading && timer) {
+    if (!isLoading && timer) {
         clearTimeout(timer);
     }
 
@@ -28,9 +29,10 @@ function Three() {
         const initReturn = initFn('three', true);
 
         function load() {
-            setLoaded(totalNum);
+            setLoaded(totalNum > 0 ? totalNum : 0);
 
-            totalNum -= .1;
+            if (totalNum > 0)
+                totalNum -= .1;
 
             timer = setTimeout(load, 10000);
         }
@@ -84,6 +86,8 @@ function Three() {
     }
 
     useEffect(() => {
+        const total = isPC ? 2 : 1;
+        setTotal(total);
         init();
     }, []);
 
